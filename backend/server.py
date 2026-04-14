@@ -29,6 +29,12 @@ from routes.inventory_v2 import router as inventory_v2_router
 from routes.issues_v2 import router as issues_v2_router
 from routes.service_settings import router as service_settings_router
 from routes.admin import router as admin_router
+from routes.ai_smart import router as ai_smart_router
+from routes.schedules import router as schedules_router
+from routes.reservations import router as reservations_router
+from routes.job_board import router as job_board_router
+from routes.assets import router as assets_router
+from routes.supply_requests import router as supply_requests_router
 from seed import seed_database
 
 # Configure logging
@@ -76,6 +82,12 @@ app.include_router(inventory_v2_router)
 app.include_router(issues_v2_router)
 app.include_router(service_settings_router)
 app.include_router(admin_router)
+app.include_router(ai_smart_router)
+app.include_router(schedules_router)
+app.include_router(reservations_router)
+app.include_router(job_board_router)
+app.include_router(assets_router)
+app.include_router(supply_requests_router)
 
 # Health check
 @app.get("/api/health")

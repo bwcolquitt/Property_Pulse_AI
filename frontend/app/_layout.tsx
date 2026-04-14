@@ -52,6 +52,13 @@ function RootNavigator() {
       <Stack.Screen name="service-rates" options={{ headerShown: true, title: 'Service Rates' }} />
       <Stack.Screen name="property-services" options={{ headerShown: true, title: 'Property Services' }} />
       <Stack.Screen name="admin-review" options={{ headerShown: true, title: 'Review Queue' }} />
+      <Stack.Screen name="ai-command" options={{ headerShown: true, title: 'AI Command Center' }} />
+      <Stack.Screen name="recurring-schedules" options={{ headerShown: true, title: 'Recurring Schedules' }} />
+      <Stack.Screen name="provider-calendar" options={{ headerShown: true, title: 'Provider Calendar' }} />
+      <Stack.Screen name="job-board" options={{ headerShown: true, title: 'Job Board' }} />
+      <Stack.Screen name="reservations" options={{ headerShown: true, title: 'Reservations' }} />
+      <Stack.Screen name="assets" options={{ headerShown: true, title: 'Property Assets' }} />
+      <Stack.Screen name="supply-requests" options={{ headerShown: true, title: 'Supply Requests' }} />
     </Stack>
   );
 }
