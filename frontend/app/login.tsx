@@ -40,10 +40,10 @@ export default function LoginScreen() {
 
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Ionicons name="sunny" size={36} color={Colors.accent} />
+            <Ionicons name="home" size={32} color={Colors.primary} />
           </View>
           <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to manage your properties</Text>
+          <Text style={styles.subtitle}>Sign in to Property Pulse</Text>
         </View>
 
         {error ? (

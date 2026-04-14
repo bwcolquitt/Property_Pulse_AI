@@ -36,7 +36,7 @@ export default function TabLayout() {
     }}>
       <Tabs.Screen name="index" options={{
         title: 'Dashboard',
-        headerTitle: 'PropertyPulse',
+        headerTitle: 'Property Pulse',
         tabBarIcon: ({ color, size }) => <Ionicons name="grid" size={size} color={color} />,
       }} />
       <Tabs.Screen name="turnovers" options={{
