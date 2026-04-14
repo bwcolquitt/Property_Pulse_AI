@@ -23,6 +23,7 @@ export default function ChecklistScreen() {
   const [issueDesc, setIssueDesc] = useState('');
   const [issuePriority, setIssuePriority] = useState('medium');
   const [issueSubmitting, setIssueSubmitting] = useState(false);
+  const [issuePhotos, setIssuePhotos] = useState<string[]>([]);
   // Workflow hints
   const [hints, setHints] = useState<any[]>([]);
   const [showHints, setShowHints] = useState(false);
@@ -50,10 +51,9 @@ export default function ChecklistScreen() {
     if (!issueTitle.trim()) { Alert.alert('Required', 'Enter an issue title'); return; }
     setIssueSubmitting(true);
     try {
-      // Get turnover to find property_id
       const turnover = await api.get(`/turnovers/${id}`);
       const propId = turnover.data?.property_id;
-      await api.post('/issues-v2/quick-report', {
+      const { data: issue } = await api.post('/issues-v2/quick-report', {
         property_id: propId,
         turnover_id: id,
         title: issueTitle,
@@ -63,13 +63,40 @@ export default function ChecklistScreen() {
         trade_type: issueModal?.room_name?.toLowerCase().includes('spa') || issueModal?.room_name?.toLowerCase().includes('pool') ? 'pool' : 'general',
         priority: issuePriority,
       });
-      Alert.alert('Issue Reported', 'Admin has been notified.');
+      // Upload photos to the issue
+      for (const photo of issuePhotos) {
+        try {
+          await api.post('/media/upload', { owner_type: 'issue', owner_id: issue.id, media_type: 'photo', base64_data: photo });
+        } catch {}
+      }
+      Alert.alert('Issue Reported', `Admin has been notified.${issuePhotos.length > 0 ? ` ${issuePhotos.length} photo(s) attached.` : ''}`);
       setIssueModal(null);
       setIssueTitle('');
       setIssueDesc('');
       setIssuePriority('medium');
+      setIssuePhotos([]);
     } catch (e) { Alert.alert('Error', 'Failed to submit issue'); }
     finally { setIssueSubmitting(false); }
+  };
+
+  const addIssuePhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, base64: true });
+      if (!result.canceled && result.assets[0]?.base64) {
+        setIssuePhotos(prev => [...prev, result.assets[0].base64!]);
+      }
+    } catch {}
+  };
+
+  const takeIssuePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') { addIssuePhoto(); return; }
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6, base64: true });
+      if (!result.canceled && result.assets[0]?.base64) {
+        setIssuePhotos(prev => [...prev, result.assets[0].base64!]);
+      }
+    } catch { addIssuePhoto(); }
   };
 
   const toggleItem = async (item: any) => {
@@ -349,6 +376,26 @@ export default function ChecklistScreen() {
                   ))}
                 </View>
               </View>
+              {/* Photo Attachments */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Photos ({issuePhotos.length})</Text>
+                <View style={styles.issuePhotoRow}>
+                  <TouchableOpacity testID="issue-photo-camera" style={styles.issuePhotoBtn} onPress={takeIssuePhoto}>
+                    <Ionicons name="camera" size={22} color={Colors.primary} />
+                    <Text style={styles.issuePhotoBtnText}>Camera</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="issue-photo-gallery" style={styles.issuePhotoBtn} onPress={addIssuePhoto}>
+                    <Ionicons name="images" size={22} color={Colors.secondary} />
+                    <Text style={styles.issuePhotoBtnText}>Gallery</Text>
+                  </TouchableOpacity>
+                  {issuePhotos.length > 0 && (
+                    <View style={styles.issuePhotoCount}>
+                      <Ionicons name="checkmark-circle" size={16} color={Colors.greenReady} />
+                      <Text style={styles.issuePhotoCountText}>{issuePhotos.length} attached</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
               <View style={styles.modalActions}>
                 <TouchableOpacity style={styles.modalCancel} onPress={() => setIssueModal(null)}>
                   <Text style={styles.modalCancelText}>Cancel</Text>
@@ -454,4 +501,10 @@ const styles = StyleSheet.create({
   modalCancelText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
   modalSubmit: { flex: 1, flexDirection: 'row', paddingVertical: 12, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 10, backgroundColor: Colors.redUrgent },
   modalSubmitText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  // Issue photo attachment
+  issuePhotoRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  issuePhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.surfaceSecondary, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
+  issuePhotoBtnText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  issuePhotoCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  issuePhotoCountText: { fontSize: 12, fontWeight: '600', color: Colors.greenReady },
 });

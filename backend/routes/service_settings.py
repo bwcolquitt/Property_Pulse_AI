@@ -23,29 +23,6 @@ class PropertyServiceConfig(BaseModel):
     property_id: str
     services: list  # ["cleaning", "maintenance", "pool", "electrical", ...]
 
-@router.get("")
-async def list_settings(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
-    settings = await db.service_company_settings.find().to_list(50)
-    return serialize_doc(settings)
-
-@router.put("/{trade_type}")
-async def update_setting(trade_type: str, input: ServiceSettingUpdate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
-    if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    update = {"updated_at": datetime.now(timezone.utc).isoformat()}
-    for field, value in input.dict(exclude_unset=True).items():
-        if value is not None:
-            update[field] = value
-    result = await db.service_company_settings.update_one({"trade_type": trade_type}, {"$set": update})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Setting not found")
-    updated = await db.service_company_settings.find_one({"trade_type": trade_type})
-    return serialize_doc(updated)
-
 @router.get("/property-services/{property_id}")
 async def get_property_services(property_id: str, request: Request):
     db = get_db(request)
@@ -68,3 +45,26 @@ async def update_property_services(input: PropertyServiceConfig, request: Reques
         upsert=True
     )
     return {"success": True, "property_id": input.property_id, "services": input.services}
+
+@router.get("")
+async def list_settings(request: Request):
+    db = get_db(request)
+    user = await get_current_user(request, db)
+    settings = await db.service_company_settings.find().to_list(50)
+    return serialize_doc(settings)
+
+@router.put("/{trade_type}")
+async def update_setting(trade_type: str, input: ServiceSettingUpdate, request: Request):
+    db = get_db(request)
+    user = await get_current_user(request, db)
+    if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    update = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    for field, value in input.dict(exclude_unset=True).items():
+        if value is not None:
+            update[field] = value
+    result = await db.service_company_settings.update_one({"trade_type": trade_type}, {"$set": update})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Setting not found")
+    updated = await db.service_company_settings.find_one({"trade_type": trade_type})
+    return serialize_doc(updated)

@@ -1,31 +1,38 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
 
 export default function SettingsScreen() {
   const { user } = useAuth();
+  const router = useRouter();
+  const isAdmin = user?.role === 'super_admin' || user?.role === 'property_manager';
 
   const sections = [
     { title: 'Account', items: [
-      { icon: 'person', label: 'Profile', desc: 'Edit your profile' },
-      { icon: 'notifications', label: 'Notifications', desc: 'Manage notification settings' },
-      { icon: 'language', label: 'Language', desc: 'English' },
+      { icon: 'person', label: 'Profile', desc: 'Edit your profile', route: '' },
+      { icon: 'notifications', label: 'Notifications', desc: 'Manage notification settings', route: '/notifications' },
+      { icon: 'language', label: 'Language', desc: 'English', route: '' },
     ]},
+    ...(isAdmin ? [{ title: 'Admin', items: [
+      { icon: 'cash', label: 'Service Company Rates', desc: 'Labor rates, markups used by AI estimates', route: '/service-rates' },
+      { icon: 'checkmark-done', label: 'Property Services', desc: 'Select services per property for inspections', route: '/property-services' },
+    ]}] : []),
     { title: 'Integrations', items: [
-      { icon: 'link', label: 'Reservation Sync', desc: 'Airbnb, Vrbo, Booking.com' },
-      { icon: 'card', label: 'Payouts', desc: 'Payment method settings' },
+      { icon: 'link', label: 'Reservation Sync', desc: 'Airbnb, Vrbo, Booking.com', route: '' },
+      { icon: 'card', label: 'Payouts', desc: 'Payment method settings', route: '' },
     ]},
     { title: 'Organization', items: [
-      { icon: 'business', label: 'Company', desc: user?.company_name || 'Set up company' },
-      { icon: 'people', label: 'Team Roles', desc: 'Manage permissions' },
-      { icon: 'color-palette', label: 'Branding', desc: 'Customize your branding' },
+      { icon: 'business', label: 'Company', desc: user?.company_name || 'Set up company', route: '' },
+      { icon: 'people', label: 'Team Roles', desc: 'Manage permissions', route: '/team' },
+      { icon: 'color-palette', label: 'Branding', desc: 'Customize your branding', route: '' },
     ]},
     { title: 'Support', items: [
-      { icon: 'help-circle', label: 'Help Center', desc: 'FAQ and guides' },
-      { icon: 'chatbubble-ellipses', label: 'Contact Support', desc: '24/7 support' },
-      { icon: 'information-circle', label: 'About', desc: 'PropertyPulse v1.0.0' },
+      { icon: 'help-circle', label: 'Help Center', desc: 'FAQ and guides', route: '' },
+      { icon: 'chatbubble-ellipses', label: 'Contact Support', desc: '24/7 support', route: '' },
+      { icon: 'information-circle', label: 'About', desc: 'Property Pulse v2.0', route: '' },
     ]},
   ];
 
@@ -36,7 +43,12 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>{section.title}</Text>
           <View style={styles.sectionCard}>
             {section.items.map((item, ii) => (
-              <TouchableOpacity key={ii} testID={`setting-${item.label.replace(/\s/g, '-').toLowerCase()}`} style={[styles.item, ii < section.items.length - 1 && styles.itemBorder]}>
+              <TouchableOpacity
+                key={ii}
+                testID={`setting-${item.label.replace(/\s/g, '-').toLowerCase()}`}
+                style={[styles.item, ii < section.items.length - 1 && styles.itemBorder]}
+                onPress={() => { if (item.route) router.push(item.route as any); }}
+              >
                 <Ionicons name={item.icon as any} size={20} color={Colors.primary} />
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemLabel}>{item.label}</Text>
