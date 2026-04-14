@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '../src/constants/theme';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function RootNavigator() {
   const { user, loading } = useAuth();
@@ -65,9 +66,11 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <StatusBar style="dark" />
-      <RootNavigator />
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

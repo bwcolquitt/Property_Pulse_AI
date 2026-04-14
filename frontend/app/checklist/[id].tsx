@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../src/constants/theme';
 import api from '../../src/utils/api';
 import * as ImagePicker from 'expo-image-picker';
+import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 
 export default function ChecklistScreen() {
   const { id } = useLocalSearchParams();
@@ -124,6 +125,13 @@ export default function ChecklistScreen() {
     // Save new order to backend
     try {
       await api.post('/admin/reorder-checklist', { turnover_id: id, item_order: newItems.map(i => i.id) });
+    } catch {}
+  };
+
+  const handleDragEnd = async ({ data: newData }: { data: any[] }) => {
+    setItems(newData);
+    try {
+      await api.post('/admin/reorder-checklist', { turnover_id: id, item_order: newData.map((i: any) => i.id) });
     } catch {}
   };
 
@@ -290,6 +298,61 @@ export default function ChecklistScreen() {
       )}
 
       {/* Checklist by Floor */}
+      {reorderMode ? (
+        <DraggableFlatList
+          data={filteredItems}
+          keyExtractor={(item: any) => item.id}
+          onDragEnd={handleDragEnd}
+          contentContainerStyle={styles.list}
+          renderItem={({ item: task, drag, isActive }: RenderItemParams<any>) => {
+            const hasPhoto = (photosTaken[task.id] || 0) > 0;
+            const typeColor = task.checklist_type === 'cleaning' ? Colors.secondary : task.checklist_type === 'maintenance' ? Colors.accent : Colors.primary;
+
+            return (
+              <ScaleDecorator>
+                <TouchableOpacity
+                  testID={`drag-task-${task.id}`}
+                  onLongPress={drag}
+                  disabled={isActive}
+                  style={[styles.dragCard, isActive && styles.dragCardActive]}
+                >
+                  <View style={styles.dragHandle}>
+                    <Ionicons name="reorder-three" size={22} color={isActive ? Colors.primary : Colors.grayInactive} />
+                  </View>
+                  <View style={[styles.checkbox, task.status === 'completed' && styles.checkboxDone, { marginTop: 0 }]}>
+                    {task.status === 'completed' && <Ionicons name="checkmark" size={16} color="#fff" />}
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <View style={styles.taskTitleRow}>
+                      <Ionicons name={roomIcon(task.room_name) as any} size={14} color={Colors.textSecondary} />
+                      <Text style={styles.taskRoom}>{task.room_name}</Text>
+                      <View style={[styles.typePill, { backgroundColor: typeColor + '15' }]}>
+                        <Text style={[styles.typePillText, { color: typeColor }]}>
+                          {task.checklist_type === 'both' ? 'Both' : task.checklist_type === 'cleaning' ? 'Clean' : 'Maint.'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.taskTitle, task.status === 'completed' && styles.taskDone]}>{task.title}</Text>
+                    {task.floor ? <Text style={styles.dragFloor}>{task.floor}</Text> : null}
+                  </View>
+                </TouchableOpacity>
+              </ScaleDecorator>
+            );
+          }}
+          ListHeaderComponent={
+            <View style={styles.dragHeader}>
+              <Ionicons name="hand-left" size={18} color={Colors.accent} />
+              <Text style={styles.dragHeaderText}>Long-press and drag to reorder tasks</Text>
+            </View>
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="checkmark-circle" size={48} color={Colors.greenReady} />
+              <Text style={styles.emptyTitle}>No tasks to reorder</Text>
+            </View>
+          }
+        />
+      ) : (
       <SectionList
         sections={sections}
         keyExtractor={item => item.id}
@@ -344,18 +407,8 @@ export default function ChecklistScreen() {
                   )}
                 </View>
               </TouchableOpacity>
-              {/* Photo buttons + Reorder arrows */}
+              {/* Photo buttons */}
               <View style={styles.photoActions}>
-                {reorderMode && (
-                  <View style={styles.reorderArrows}>
-                    <TouchableOpacity testID={`move-up-${task.id}`} style={styles.arrowBtn} onPress={() => moveItem(task.id, 'up')}>
-                      <Ionicons name="arrow-up" size={16} color={Colors.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity testID={`move-down-${task.id}`} style={styles.arrowBtn} onPress={() => moveItem(task.id, 'down')}>
-                      <Ionicons name="arrow-down" size={16} color={Colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                )}
                 <TouchableOpacity testID={`photo-camera-${task.id}`} style={[styles.photoBtn, needsPhoto && styles.photoBtnUrgent]} onPress={() => takePhoto(task)}>
                   {uploading === task.id ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="camera" size={18} color={needsPhoto ? Colors.redUrgent : Colors.primary} />}
                 </TouchableOpacity>
@@ -374,6 +427,7 @@ export default function ChecklistScreen() {
           </View>
         }
       />
+      )}
 
       {/* Issue Report Modal */}
       <Modal visible={!!issueModal} transparent animationType="fade" onRequestClose={() => setIssueModal(null)}>
@@ -510,6 +564,13 @@ const styles = StyleSheet.create({
   reorderBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   reorderArrows: { flexDirection: 'row', gap: 4 },
   arrowBtn: { width: 30, height: 30, borderRadius: 6, backgroundColor: Colors.primary + '12', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.primary + '30' },
+  // Drag and Drop
+  dragCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
+  dragCardActive: { backgroundColor: Colors.primary + '08', borderColor: Colors.primary, borderWidth: 1, borderRadius: 10, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
+  dragHandle: { width: 28, height: 36, justifyContent: 'center', alignItems: 'center' },
+  dragFloor: { fontSize: 10, fontWeight: '600', color: Colors.accent, textTransform: 'uppercase' },
+  dragHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.accent + '10', borderBottomWidth: 1, borderBottomColor: Colors.accent + '30' },
+  dragHeaderText: { fontSize: 13, fontWeight: '600', color: Colors.accent },
   // Empty
   empty: { alignItems: 'center', paddingVertical: 60, gap: Spacing.sm },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
