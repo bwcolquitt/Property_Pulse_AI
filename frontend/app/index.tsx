@@ -12,11 +12,7 @@ export default function LandingScreen() {
   const insets = useSafeAreaInsets();
   const { user, loading } = useAuth();
 
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace('/(tabs)');
-    }
-  }, [loading, user]);
+  // Auth routing handled by _layout.tsx RootNavigator
 
   if (loading) {
     return (

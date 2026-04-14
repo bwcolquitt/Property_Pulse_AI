@@ -2,7 +2,7 @@ import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import api from '../../src/utils/api';
@@ -66,13 +66,6 @@ const hStyles = StyleSheet.create({
 
 export default function TabLayout() {
   const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/login');
-    }
-  }, [loading, user]);
 
   if (loading || !user) {
     return (

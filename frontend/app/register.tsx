@@ -26,7 +26,7 @@ export default function RegisterScreen() {
     setError('');
     try {
       await register(form);
-      router.replace('/(tabs)');
+      // Auth routing handled by _layout.tsx RootNavigator
     } catch (e: any) {
       const detail = e?.response?.data?.detail;
       setError(typeof detail === 'string' ? detail : 'Registration failed');

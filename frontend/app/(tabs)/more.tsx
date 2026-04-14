@@ -62,7 +62,7 @@ export default function MoreScreen() {
         style={styles.logoutBtn}
         onPress={async () => {
           await logout();
-          router.replace('/');
+          // Auth routing handled by _layout.tsx RootNavigator
         }}
       >
         <Ionicons name="log-out-outline" size={22} color={Colors.redUrgent} />

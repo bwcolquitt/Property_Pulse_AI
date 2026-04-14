@@ -23,7 +23,7 @@ export default function LoginScreen() {
     setError('');
     try {
       await login(email, password);
-      router.replace('/(tabs)');
+      // Auth routing handled by _layout.tsx RootNavigator
     } catch (e: any) {
       const detail = e?.response?.data?.detail;
       setError(typeof detail === 'string' ? detail : 'Invalid email or password');
