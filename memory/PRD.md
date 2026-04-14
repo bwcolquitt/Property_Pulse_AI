@@ -23,8 +23,46 @@ PropertyPulse is a modern, mobile-first platform for short-term rental turnover 
 - [x] Welcome greeting with readiness score
 - [x] Quick stats (Today's Turnovers, At Risk, Inspections, Properties)
 - [x] **Outstanding Maintenance Widget** (flagship - total open, urgent, due today, unassigned, blocking guest)
+- [x] **AI Predictive Readiness Widget** (GPT-5.2 powered - portfolio score, per-property scores, risk factors)
 - [x] Recent Issues list with priority dots and blocks badges
 - [x] Quick Actions (New Turnover, Report Issue, Messages, Reports)
+
+### AI Features (GPT-5.2 via Emergent LLM Key)
+- [x] AI Checklist Generation - generates 15-25 task checklists by property type
+- [x] AI Severity Classification - classifies priority, guest impact, blocks-check-in
+- [x] AI Risk Scoring - per-property risk analysis with recommendations
+- [x] AI Predictive Readiness Score - portfolio-wide risk assessment with per-property breakdown
+
+### Photo/Video Upload
+- [x] Base64 media upload to MongoDB
+- [x] Media listing by owner type/id
+- [x] Media retrieval endpoint
+
+### Inspections Module
+- [x] Inspection CRUD with status filters (pending, in_progress, passed, failed, reclean_requested)
+- [x] Auto-create inspection items from checklist templates
+- [x] Pass/fail per item with score calculation
+- [x] Reclean request workflow
+- [x] Frontend inspection list with score display
+
+### Inventory Management
+- [x] Inventory items with par levels and reorder levels
+- [x] Low stock detection and filtering
+- [x] Supply request creation, approval, fulfillment workflow
+- [x] Stock level progress bars
+- [x] Frontend inventory screen with category icons
+
+### Marketplace Bidding
+- [x] Quote submission on job posts
+- [x] Accept/reject quote workflow
+- [x] Auto-reject competing quotes on acceptance
+
+### Calendar View
+- [x] Monthly calendar with turnover dots by status color
+- [x] Day drill-down showing turnovers with status, progress, assigned cleaner
+
+### Navigation Updates
+- [x] More menu includes Inspections, Inventory, Calendar links
 
 ### Turnovers
 - [x] List view with status filters
