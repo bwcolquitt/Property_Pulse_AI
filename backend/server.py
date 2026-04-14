@@ -18,6 +18,11 @@ from routes.maintenance import router as maintenance_router
 from routes.marketplace import router as marketplace_router
 from routes.messages import router as messages_router
 from routes.reports import router as reports_router
+from routes.ai import router as ai_router
+from routes.media import router as media_router
+from routes.inspections import router as inspections_router
+from routes.inventory import router as inventory_router
+from routes.quotes import router as quotes_router
 from seed import seed_database
 
 # Configure logging
@@ -54,6 +59,11 @@ app.include_router(maintenance_router)
 app.include_router(marketplace_router)
 app.include_router(messages_router)
 app.include_router(reports_router)
+app.include_router(ai_router)
+app.include_router(media_router)
+app.include_router(inspections_router)
+app.include_router(inventory_router)
+app.include_router(quotes_router)
 
 # Health check
 @app.get("/api/health")

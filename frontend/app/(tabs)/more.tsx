@@ -7,6 +7,9 @@ import { useAuth } from '../../src/context/AuthContext';
 
 const menuItems = [
   { label: 'Properties', icon: 'home', route: '/property/list', color: Colors.primary },
+  { label: 'Inspections', icon: 'clipboard', route: '/inspections', color: Colors.purpleAwaiting },
+  { label: 'Inventory', icon: 'cube', route: '/inventory', color: Colors.accent },
+  { label: 'Calendar', icon: 'calendar', route: '/calendar', color: Colors.greenReady },
   { label: 'Messages', icon: 'chatbubbles', route: '/messages', color: Colors.blueAssigned },
   { label: 'Reports', icon: 'bar-chart', route: '/reports', color: Colors.purpleAwaiting },
   { label: 'Team', icon: 'people', route: '/team', color: Colors.secondary },

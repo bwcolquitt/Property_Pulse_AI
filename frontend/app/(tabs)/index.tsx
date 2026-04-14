@@ -12,6 +12,8 @@ export default function DashboardScreen() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [predictive, setPredictive] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -113,6 +115,45 @@ export default function DashboardScreen() {
         ))}
       </View>
 
+      {/* AI Predictive Readiness Score */}
+      <TouchableOpacity testID="predictive-readiness-widget" style={styles.aiWidget} onPress={async () => {
+        try {
+          setAiLoading(true);
+          const { data } = await api.post('/ai/predictive-readiness', {});
+          setPredictive(data);
+        } catch (e) { console.error(e); }
+        finally { setAiLoading(false); }
+      }}>
+        <View style={styles.aiHeader}>
+          <View style={styles.aiTitleRow}>
+            <Ionicons name="sparkles" size={20} color={Colors.purpleAwaiting} />
+            <Text style={styles.aiTitle}>AI Predictive Readiness</Text>
+          </View>
+          {aiLoading && <ActivityIndicator size="small" color={Colors.purpleAwaiting} />}
+          {!aiLoading && !predictive && <Text style={styles.aiTap}>Tap to analyze</Text>}
+        </View>
+        {predictive && (
+          <View style={styles.aiContent}>
+            <View style={styles.aiScoreRow}>
+              <View style={[styles.aiScoreCircle, { borderColor: predictive.portfolio_average >= 80 ? Colors.greenReady : predictive.portfolio_average >= 50 ? Colors.yellowAtRisk : Colors.redUrgent }]}>
+                <Text style={[styles.aiScoreNum, { color: predictive.portfolio_average >= 80 ? Colors.greenReady : predictive.portfolio_average >= 50 ? Colors.yellowAtRisk : Colors.redUrgent }]}>{predictive.portfolio_average}</Text>
+                <Text style={styles.aiScoreLabel}>Score</Text>
+              </View>
+              <View style={styles.aiMetrics}>
+                <Text style={styles.aiMetricText}>{predictive.at_risk_count} properties at risk</Text>
+                {predictive.properties?.slice(0, 3).map((p: any, i: number) => (
+                  <View key={i} style={styles.aiPropertyRow}>
+                    <View style={[styles.aiDot, { backgroundColor: p.readiness_score >= 80 ? Colors.greenReady : p.readiness_score >= 50 ? Colors.yellowAtRisk : Colors.redUrgent }]} />
+                    <Text style={styles.aiPropertyName} numberOfLines={1}>{p.property_name}</Text>
+                    <Text style={[styles.aiPropertyScore, { color: p.readiness_score >= 80 ? Colors.greenReady : p.readiness_score >= 50 ? Colors.yellowAtRisk : Colors.redUrgent }]}>{p.readiness_score}%</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+        )}
+      </TouchableOpacity>
+
       {/* Quick Actions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -173,4 +214,21 @@ const styles = StyleSheet.create({
   actionBtn: { flex: 1, alignItems: 'center', gap: Spacing.sm },
   actionIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   actionLabel: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary, textAlign: 'center' },
+  // AI Widget Styles
+  aiWidget: { marginHorizontal: Spacing.md, backgroundColor: Colors.surface, borderRadius: 12, padding: Spacing.md, borderWidth: 1.5, borderColor: Colors.purpleAwaiting + '40', marginBottom: Spacing.md },
+  aiHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  aiTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  aiTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  aiTap: { fontSize: 12, color: Colors.purpleAwaiting, fontWeight: '600' },
+  aiContent: { marginTop: Spacing.md },
+  aiScoreRow: { flexDirection: 'row', gap: Spacing.md, alignItems: 'center' },
+  aiScoreCircle: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, justifyContent: 'center', alignItems: 'center' },
+  aiScoreNum: { fontSize: 24, fontWeight: '800' },
+  aiScoreLabel: { fontSize: 10, fontWeight: '600', color: Colors.textSecondary },
+  aiMetrics: { flex: 1, gap: 6 },
+  aiMetricText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  aiPropertyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  aiDot: { width: 8, height: 8, borderRadius: 4 },
+  aiPropertyName: { flex: 1, fontSize: 13, color: Colors.textPrimary },
+  aiPropertyScore: { fontSize: 13, fontWeight: '700' },
 });

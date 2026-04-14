@@ -19,6 +19,9 @@ export default function RootLayout() {
         <Stack.Screen name="reports" options={{ headerShown: true, title: 'Reports' }} />
         <Stack.Screen name="team" options={{ headerShown: true, title: 'Team' }} />
         <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
+        <Stack.Screen name="inspections" options={{ headerShown: true, title: 'Inspections' }} />
+        <Stack.Screen name="inventory" options={{ headerShown: true, title: 'Inventory' }} />
+        <Stack.Screen name="calendar" options={{ headerShown: true, title: 'Calendar' }} />
       </Stack>
     </AuthProvider>
   );
