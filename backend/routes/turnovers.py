@@ -44,8 +44,9 @@ async def list_turnovers(request: Request, status: Optional[str] = None, propert
         if t.get("property_id"):
             try:
                 prop = await db.properties.find_one({"_id": ObjectId(t["property_id"])})
-                doc["property_name"] = prop.get("name", "") if prop else ""
-                doc["property_address"] = prop.get("address_1", "") if prop else ""
+                doc["property_name"] = prop.get("nickname", "") or prop.get("name", "") if prop else ""
+                doc["property_full_name"] = prop.get("name", "") if prop else ""
+                doc["property_address"] = f"{prop.get('address_1', '')}, {prop.get('city', '')}" if prop else ""
                 doc["property_photo"] = prop.get("cover_photo_url", "") if prop else ""
             except Exception:
                 doc["property_name"] = ""
@@ -179,9 +180,20 @@ async def get_turnover_checklist(turnover_id: str, request: Request):
     if not checklist:
         raise HTTPException(status_code=404, detail="No checklist found for this turnover")
     items = await db.turnover_checklist_items.find({"turnover_checklist_id": str(checklist["_id"])}).sort("sort_order", 1).to_list(200)
+    # Get property info for header
+    turnover = await db.turnovers.find_one({"_id": ObjectId(turnover_id)})
+    prop_info = None
+    if turnover and turnover.get("property_id"):
+        try:
+            prop = await db.properties.find_one({"_id": ObjectId(turnover["property_id"])})
+            if prop:
+                prop_info = {"nickname": prop.get("nickname", ""), "name": prop.get("name", ""), "address_1": prop.get("address_1", ""), "city": prop.get("city", ""), "state": prop.get("state", ""), "floors": prop.get("floors", [])}
+        except Exception:
+            pass
     return {
         "checklist": serialize_doc(checklist),
-        "items": serialize_doc(items)
+        "items": serialize_doc(items),
+        "property": prop_info,
     }
 
 @router.put("/checklist-items/{item_id}")

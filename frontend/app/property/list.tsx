@@ -40,9 +40,10 @@ export default function PropertiesListScreen() {
           )}
           <View style={styles.cardBody}>
             <View style={styles.nameRow}>
-              <Text style={styles.cardTitle} numberOfLines={1}>{p.name}</Text>
+              <Text style={styles.cardTitle} numberOfLines={1}>{p.nickname || p.name}</Text>
               <Text style={styles.codeTag}>{p.code}</Text>
             </View>
+            {p.nickname && <Text style={styles.fullName}>{p.name}</Text>}
             <View style={styles.addressRow}>
               <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
               <Text style={styles.addressText} numberOfLines={1}>{p.address_1}, {p.city}, {p.state} {p.postal_code}</Text>
@@ -89,6 +90,7 @@ const styles = StyleSheet.create({
   cardBody: { padding: Spacing.md, gap: 6 },
   nameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary, flex: 1 },
+  fullName: { fontSize: 13, color: Colors.textSecondary, marginTop: -2 },
   codeTag: { backgroundColor: Colors.primary + '12', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   addressText: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
