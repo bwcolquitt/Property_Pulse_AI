@@ -27,6 +27,7 @@ export default function ChecklistScreen() {
   // Workflow hints
   const [hints, setHints] = useState<any[]>([]);
   const [showHints, setShowHints] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
 
   const fetchChecklist = useCallback(async () => {
     try {
@@ -110,6 +111,20 @@ export default function ChecklistScreen() {
       await api.put(`/turnovers/checklist-items/${item.id}`, { status: newStatus });
       fetchChecklist();
     } catch (e) { console.error(e); }
+  };
+
+  const moveItem = async (itemId: string, direction: 'up' | 'down') => {
+    const idx = items.findIndex(i => i.id === itemId);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= items.length) return;
+    const newItems = [...items];
+    [newItems[idx], newItems[swapIdx]] = [newItems[swapIdx], newItems[idx]];
+    setItems(newItems);
+    // Save new order to backend
+    try {
+      await api.post('/admin/reorder-checklist', { turnover_id: id, item_order: newItems.map(i => i.id) });
+    } catch {}
   };
 
   const takePhoto = async (item: any) => {
@@ -253,6 +268,9 @@ export default function ChecklistScreen() {
           ))}
         </View>
         <View style={styles.toggleRow}>
+          <TouchableOpacity testID="reorder-toggle" style={[styles.reorderBtn, reorderMode && styles.reorderBtnActive]} onPress={() => setReorderMode(!reorderMode)}>
+            <Ionicons name="swap-vertical" size={16} color={reorderMode ? Colors.primaryForeground : Colors.textSecondary} />
+          </TouchableOpacity>
           <Text style={styles.toggleLabel}>Hide done</Text>
           <Switch testID="hide-completed-toggle" value={hideCompleted} onValueChange={setHideCompleted} trackColor={{ true: Colors.primary, false: Colors.border }} thumbColor={Colors.surface} />
         </View>
@@ -326,8 +344,18 @@ export default function ChecklistScreen() {
                   )}
                 </View>
               </TouchableOpacity>
-              {/* Photo buttons */}
+              {/* Photo buttons + Reorder arrows */}
               <View style={styles.photoActions}>
+                {reorderMode && (
+                  <View style={styles.reorderArrows}>
+                    <TouchableOpacity testID={`move-up-${task.id}`} style={styles.arrowBtn} onPress={() => moveItem(task.id, 'up')}>
+                      <Ionicons name="arrow-up" size={16} color={Colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity testID={`move-down-${task.id}`} style={styles.arrowBtn} onPress={() => moveItem(task.id, 'down')}>
+                      <Ionicons name="arrow-down" size={16} color={Colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                )}
                 <TouchableOpacity testID={`photo-camera-${task.id}`} style={[styles.photoBtn, needsPhoto && styles.photoBtnUrgent]} onPress={() => takePhoto(task)}>
                   {uploading === task.id ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="camera" size={18} color={needsPhoto ? Colors.redUrgent : Colors.primary} />}
                 </TouchableOpacity>
@@ -477,6 +505,11 @@ const styles = StyleSheet.create({
   photoActions: { flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm, marginLeft: 40 },
   photoBtn: { width: 36, height: 36, borderRadius: 8, backgroundColor: Colors.surfaceSecondary, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
   photoBtnUrgent: { borderColor: Colors.redUrgent + '50', backgroundColor: Colors.redUrgent + '08' },
+  // Reorder
+  reorderBtn: { width: 36, height: 36, borderRadius: 8, backgroundColor: Colors.surfaceSecondary, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
+  reorderBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  reorderArrows: { flexDirection: 'row', gap: 4 },
+  arrowBtn: { width: 30, height: 30, borderRadius: 6, backgroundColor: Colors.primary + '12', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.primary + '30' },
   // Empty
   empty: { alignItems: 'center', paddingVertical: 60, gap: Spacing.sm },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },

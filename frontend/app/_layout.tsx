@@ -51,6 +51,7 @@ function RootNavigator() {
       <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications' }} />
       <Stack.Screen name="service-rates" options={{ headerShown: true, title: 'Service Rates' }} />
       <Stack.Screen name="property-services" options={{ headerShown: true, title: 'Property Services' }} />
+      <Stack.Screen name="admin-review" options={{ headerShown: true, title: 'Review Queue' }} />
     </Stack>
   );
 }

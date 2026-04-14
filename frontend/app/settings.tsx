@@ -17,6 +17,7 @@ export default function SettingsScreen() {
       { icon: 'language', label: 'Language', desc: 'English', route: '' },
     ]},
     ...(isAdmin ? [{ title: 'Admin', items: [
+      { icon: 'clipboard', label: 'Review Queue', desc: 'AI estimates awaiting approval', route: '/admin-review' },
       { icon: 'cash', label: 'Service Company Rates', desc: 'Labor rates, markups used by AI estimates', route: '/service-rates' },
       { icon: 'checkmark-done', label: 'Property Services', desc: 'Select services per property for inspections', route: '/property-services' },
     ]}] : []),
