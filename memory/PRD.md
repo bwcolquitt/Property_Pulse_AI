@@ -140,3 +140,67 @@ PropertyPulse is a modern, mobile-first platform for short-term rental turnover 
 
 ## Business Enhancement
 Consider adding a **Predictive Readiness Score** using AI that analyzes historical turnover data, issue patterns, and cleaner performance to predict which properties are likely to have problems before the next guest arrival. This could be offered as a premium feature in the Growth+ tier.
+
+
+## Release 3 Features (Implemented)
+
+### AI Command Center
+- [x] AI Auto-Schedule (GPT-5.2 optimizes turnover scheduling)
+- [x] AI Issue Pattern Detection (recurring patterns, predictive alerts)
+- [x] AI Predictive Inventory (supply forecasting, shopping lists)
+- [x] AI Turnover Debrief (executive summary generation)
+- [x] Linked to navigation from More tab
+
+### Recurring Schedules
+- [x] Create/manage recurring cleaning/maintenance schedules
+- [x] Configurable frequency (daily/weekly/biweekly/monthly)
+- [x] Day-of-week and preferred time selection
+- [x] Property and service type assignment
+- [x] Delete/deactivate schedules
+
+### Provider Availability Calendar
+- [x] Calendar view with multi-dot marking per provider
+- [x] Daily availability view for all providers
+- [x] Set available/unavailable per provider per date
+- [x] Start/end time and notes for availability slots
+- [x] Bulk availability API for calendar rendering
+
+### Two-Sided Marketplace / Job Board
+- [x] Post jobs with type, urgency, budget range
+- [x] Browse jobs with status filters (open/awarded/closed)
+- [x] Submit bids with amount, hours, message
+- [x] Accept/reject bids workflow
+- [x] Job detail modal with all bids listed
+
+### Reservation Sync Engine
+- [x] List/create reservations manually
+- [x] Mock sync from Airbnb/Vrbo/Booking.com
+- [x] Reservation stats (total, upcoming, by source)
+- [x] Color-coded source badges (Airbnb red, Vrbo blue, Booking navy)
+- [x] Cancel reservations
+
+### Comprehensive Reports & Analytics
+- [x] 7 report types with inline data expansion
+- [x] Outstanding Maintenance report (priority breakdown)
+- [x] Guest Readiness report (per-property ready/not-ready)
+- [x] Turnover Completion report (status, scores)
+- [x] Cleaner Scorecard (performance scoring)
+- [x] Vendor Performance (ratings, response rates)
+- [x] Issue Trends by Property (trade breakdown)
+- [x] Financial Summary (costs by trade, approved/pending)
+- [x] CSV export API endpoint for each report
+
+### Property Asset Tracking
+- [x] Track assets by property (appliance, furniture, fixture, electronics, outdoor)
+- [x] Manufacturer, model, serial number tracking
+- [x] Warranty expiry with auto-calculated days-left
+- [x] Condition tracking (new/good/fair/poor/needs_replacement)
+- [x] Expiring warranties alert view
+- [x] Category filter and stats dashboard
+
+### Supply Request & Approval Workflow
+- [x] Create supply requests with itemized lists
+- [x] Normal/urgent priority support
+- [x] Approve/reject/fulfill workflow
+- [x] Auto-update inventory quantities on fulfillment
+- [x] Stats dashboard (pending/approved/fulfilled)
