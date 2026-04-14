@@ -26,6 +26,8 @@ from routes.quotes import router as quotes_router
 from routes.notifications import router as notifications_router
 from routes.geofence import router as geofence_router
 from routes.inventory_v2 import router as inventory_v2_router
+from routes.issues_v2 import router as issues_v2_router
+from routes.service_settings import router as service_settings_router
 from seed import seed_database
 
 # Configure logging
@@ -70,6 +72,8 @@ app.include_router(quotes_router)
 app.include_router(notifications_router)
 app.include_router(geofence_router)
 app.include_router(inventory_v2_router)
+app.include_router(issues_v2_router)
+app.include_router(service_settings_router)
 
 # Health check
 @app.get("/api/health")

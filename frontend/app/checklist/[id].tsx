@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert, Platform, Switch, Modal, TextInput, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../src/constants/theme';
@@ -16,7 +16,16 @@ export default function ChecklistScreen() {
   const [uploading, setUploading] = useState<string | null>(null);
   const [photosTaken, setPhotosTaken] = useState<Record<string, number>>({});
   const [hideCompleted, setHideCompleted] = useState(false);
-  const [typeFilter, setTypeFilter] = useState<'all' | 'cleaning' | 'maintenance'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'cleaning' | 'maintenance' | 'pool'>('all');
+  // Issue reporting
+  const [issueModal, setIssueModal] = useState<any>(null); // null or {floor, room_name} or {global: true}
+  const [issueTitle, setIssueTitle] = useState('');
+  const [issueDesc, setIssueDesc] = useState('');
+  const [issuePriority, setIssuePriority] = useState('medium');
+  const [issueSubmitting, setIssueSubmitting] = useState(false);
+  // Workflow hints
+  const [hints, setHints] = useState<any[]>([]);
+  const [showHints, setShowHints] = useState(false);
 
   const fetchChecklist = useCallback(async () => {
     try {
@@ -29,6 +38,39 @@ export default function ChecklistScreen() {
   }, [id]);
 
   useEffect(() => { fetchChecklist(); }, [fetchChecklist]);
+
+  // Fetch workflow hints
+  useEffect(() => {
+    (async () => {
+      try { const { data } = await api.get('/issues-v2/workflow-hints'); setHints(data); } catch {}
+    })();
+  }, []);
+
+  const submitIssue = async () => {
+    if (!issueTitle.trim()) { Alert.alert('Required', 'Enter an issue title'); return; }
+    setIssueSubmitting(true);
+    try {
+      // Get turnover to find property_id
+      const turnover = await api.get(`/turnovers/${id}`);
+      const propId = turnover.data?.property_id;
+      await api.post('/issues-v2/quick-report', {
+        property_id: propId,
+        turnover_id: id,
+        title: issueTitle,
+        description: issueDesc,
+        floor: issueModal?.floor || '',
+        room_name: issueModal?.room_name || '',
+        trade_type: issueModal?.room_name?.toLowerCase().includes('spa') || issueModal?.room_name?.toLowerCase().includes('pool') ? 'pool' : 'general',
+        priority: issuePriority,
+      });
+      Alert.alert('Issue Reported', 'Admin has been notified.');
+      setIssueModal(null);
+      setIssueTitle('');
+      setIssueDesc('');
+      setIssuePriority('medium');
+    } catch (e) { Alert.alert('Error', 'Failed to submit issue'); }
+    finally { setIssueSubmitting(false); }
+  };
 
   const toggleItem = async (item: any) => {
     // If requires photo and no photo taken, block completion
@@ -78,7 +120,10 @@ export default function ChecklistScreen() {
   // Filter items
   let filteredItems = items;
   if (typeFilter !== 'all') {
-    filteredItems = filteredItems.filter(i => i.checklist_type === typeFilter || i.checklist_type === 'both');
+    filteredItems = filteredItems.filter(i => {
+      if (typeFilter === 'pool') return i.room_name?.toLowerCase().includes('pool') || i.room_name?.toLowerCase().includes('spa') || i.room_name?.toLowerCase().includes('hot tub');
+      return i.checklist_type === typeFilter || i.checklist_type === 'both';
+    });
   }
   if (hideCompleted) {
     filteredItems = filteredItems.filter(i => i.status !== 'completed');
@@ -131,11 +176,31 @@ export default function ChecklistScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Property Header */}
+      {/* Property Header with Issue Report Icon */}
       {property && (
         <View style={styles.propertyHeader}>
-          <Text style={styles.propertyNickname}>{property.nickname || property.name}</Text>
-          <Text style={styles.propertyAddress}>{property.address_1}, {property.city}, {property.state}</Text>
+          <View style={styles.propHeaderRow}>
+            <View style={{flex: 1}}>
+              <Text style={styles.propertyNickname}>{property.nickname || property.name}</Text>
+              <Text style={styles.propertyAddress}>{property.address_1}, {property.city}, {property.state}</Text>
+            </View>
+            <TouchableOpacity testID="global-issue-btn" style={styles.issueBtn} onPress={() => setIssueModal({ global: true, floor: '', room_name: '' })}>
+              <Ionicons name="warning" size={22} color={Colors.redUrgent} />
+            </TouchableOpacity>
+            <TouchableOpacity testID="workflow-hints-btn" style={styles.hintsBtn} onPress={() => setShowHints(!showHints)}>
+              <Ionicons name="bulb" size={22} color={Colors.accent} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Workflow Hints Banner */}
+      {showHints && hints.length > 0 && (
+        <View style={styles.hintsBanner}>
+          <View style={styles.hintsHeader}><Ionicons name="bulb" size={16} color={Colors.accent} /><Text style={styles.hintsTitle}>Smart Workflow Tips</Text></View>
+          {hints.map((h: any, i: number) => (
+            <View key={i} style={styles.hintRow}><Text style={styles.hintCategory}>{h.category}</Text><Text style={styles.hintText}>{h.hint}</Text></View>
+          ))}
         </View>
       )}
 
@@ -153,10 +218,10 @@ export default function ChecklistScreen() {
       {/* Controls: Type Filter + Hide Completed Toggle */}
       <View style={styles.controls}>
         <View style={styles.typeFilters}>
-          {(['all', 'cleaning', 'maintenance'] as const).map(t => (
+          {(['all', 'cleaning', 'maintenance', 'pool'] as const).map(t => (
             <TouchableOpacity key={t} testID={`type-filter-${t}`} style={[styles.typeBtn, typeFilter === t && styles.typeBtnActive]} onPress={() => setTypeFilter(t)}>
-              <Ionicons name={t === 'all' ? 'list' : t === 'cleaning' ? 'sparkles' : 'construct'} size={14} color={typeFilter === t ? Colors.primaryForeground : Colors.textSecondary} />
-              <Text style={[styles.typeBtnText, typeFilter === t && styles.typeBtnTextActive]}>{t === 'all' ? 'All' : t === 'cleaning' ? 'Cleaning' : 'Maint.'}</Text>
+              <Ionicons name={t === 'all' ? 'list' : t === 'cleaning' ? 'sparkles' : t === 'pool' ? 'water' : 'construct'} size={14} color={typeFilter === t ? Colors.primaryForeground : Colors.textSecondary} />
+              <Text style={[styles.typeBtnText, typeFilter === t && styles.typeBtnTextActive]}>{t === 'all' ? 'All' : t === 'cleaning' ? 'Clean' : t === 'pool' ? 'Pool/Spa' : 'Maint.'}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -189,6 +254,9 @@ export default function ChecklistScreen() {
           <View style={styles.floorHeader}>
             <Ionicons name={section.title.toLowerCase().includes('exterior') || section.title.toLowerCase().includes('rooftop') ? 'sunny' : 'layers'} size={18} color={Colors.accent} />
             <Text style={styles.floorTitle}>{section.title}</Text>
+            <TouchableOpacity testID={`issue-floor-${section.title}`} style={styles.floorIssueBtn} onPress={() => setIssueModal({ floor: section.title, room_name: '' })}>
+              <Ionicons name="warning" size={16} color={Colors.redUrgent} />
+            </TouchableOpacity>
             <View style={styles.floorBadge}>
               <Text style={styles.floorCount}>{section.completed}/{section.total}</Text>
             </View>
@@ -251,6 +319,48 @@ export default function ChecklistScreen() {
           </View>
         }
       />
+
+      {/* Issue Report Modal */}
+      <Modal visible={!!issueModal} transparent animationType="fade" onRequestClose={() => setIssueModal(null)}>
+        <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={styles.modalScroll}>
+            <View style={styles.modal}>
+              <View style={styles.modalTitleRow}>
+                <Ionicons name="warning" size={22} color={Colors.redUrgent} />
+                <Text style={styles.modalTitle}>Report Issue</Text>
+              </View>
+              {issueModal?.floor && <Text style={styles.modalLocation}>Location: {issueModal.floor}{issueModal.room_name ? ` - ${issueModal.room_name}` : ''}</Text>}
+              {issueModal?.global && <Text style={styles.modalLocation}>General property issue</Text>}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Issue Title *</Text>
+                <TextInput testID="issue-title-input" style={styles.textInput} placeholder="e.g., Broken spa jet" placeholderTextColor={Colors.grayInactive} value={issueTitle} onChangeText={setIssueTitle} />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput testID="issue-desc-input" style={[styles.textInput, { height: 80 }]} placeholder="Describe the issue in detail..." placeholderTextColor={Colors.grayInactive} value={issueDesc} onChangeText={setIssueDesc} multiline />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Priority</Text>
+                <View style={styles.priorityRow}>
+                  {['low', 'medium', 'high', 'urgent'].map(p => (
+                    <TouchableOpacity key={p} testID={`priority-${p}`} style={[styles.priorityBtn, issuePriority === p && { backgroundColor: p === 'urgent' ? Colors.redUrgent : p === 'high' ? Colors.accent : p === 'medium' ? Colors.yellowAtRisk : Colors.greenReady, borderColor: 'transparent' }]} onPress={() => setIssuePriority(p)}>
+                      <Text style={[styles.priorityBtnText, issuePriority === p && { color: '#fff' }]}>{p}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.modalCancel} onPress={() => setIssueModal(null)}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity testID="submit-issue-btn" style={styles.modalSubmit} onPress={submitIssue} disabled={issueSubmitting}>
+                  {issueSubmitting ? <ActivityIndicator color="#fff" /> : <><Ionicons name="send" size={16} color="#fff" /><Text style={styles.modalSubmitText}>Report</Text></>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -260,8 +370,18 @@ const styles = StyleSheet.create({
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
   // Property Header
   propertyHeader: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md },
+  propHeaderRow: { flexDirection: 'row', alignItems: 'center' },
   propertyNickname: { fontSize: 20, fontWeight: '800', color: Colors.primaryForeground },
   propertyAddress: { fontSize: 13, color: Colors.primaryForeground + 'CC', marginTop: 2 },
+  issueBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginLeft: 8 },
+  hintsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
+  // Workflow Hints
+  hintsBanner: { backgroundColor: Colors.accent + '12', padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.accent + '30' },
+  hintsHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  hintsTitle: { fontSize: 14, fontWeight: '700', color: Colors.accent },
+  hintRow: { flexDirection: 'row', gap: 8, paddingVertical: 4, paddingLeft: 4 },
+  hintCategory: { fontSize: 10, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', width: 60 },
+  hintText: { fontSize: 12, color: Colors.textPrimary, flex: 1, lineHeight: 17 },
   // Progress
   progressHeader: { backgroundColor: Colors.surface, padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
@@ -314,4 +434,24 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingVertical: 60, gap: Spacing.sm },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   emptyText: { fontSize: 14, color: Colors.textSecondary },
+  // Floor Issue Button
+  floorIssueBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.redUrgent + '12', justifyContent: 'center', alignItems: 'center' },
+  // Issue Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' },
+  modalScroll: { flexGrow: 1, justifyContent: 'center', padding: Spacing.lg },
+  modal: { backgroundColor: Colors.surface, borderRadius: 16, padding: Spacing.lg, gap: Spacing.md },
+  modalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
+  modalLocation: { fontSize: 13, color: Colors.textSecondary, fontStyle: 'italic' },
+  inputGroup: { gap: 4 },
+  inputLabel: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+  textInput: { backgroundColor: Colors.surfaceSecondary, borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 14, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border },
+  priorityRow: { flexDirection: 'row', gap: 8 },
+  priorityBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surfaceSecondary },
+  priorityBtnText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, textTransform: 'capitalize' },
+  modalActions: { flexDirection: 'row', gap: Spacing.sm },
+  modalCancel: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
+  modalCancelText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
+  modalSubmit: { flex: 1, flexDirection: 'row', paddingVertical: 12, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 10, backgroundColor: Colors.redUrgent },
+  modalSubmitText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });
