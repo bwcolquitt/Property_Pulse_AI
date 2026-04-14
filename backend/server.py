@@ -23,6 +23,7 @@ from routes.media import router as media_router
 from routes.inspections import router as inspections_router
 from routes.inventory import router as inventory_router
 from routes.quotes import router as quotes_router
+from routes.notifications import router as notifications_router
 from seed import seed_database
 
 # Configure logging
@@ -64,6 +65,7 @@ app.include_router(media_router)
 app.include_router(inspections_router)
 app.include_router(inventory_router)
 app.include_router(quotes_router)
+app.include_router(notifications_router)
 
 # Health check
 @app.get("/api/health")

@@ -4,6 +4,7 @@ from typing import Optional
 from helpers import get_current_user, serialize_doc
 from datetime import datetime, timezone
 from bson import ObjectId
+from routes.notifications import notify_admins
 
 router = APIRouter(prefix="/api/turnovers", tags=["turnovers"])
 
@@ -32,6 +33,9 @@ async def list_turnovers(request: Request, status: Optional[str] = None, propert
         query["status"] = status
     if property_id:
         query["property_id"] = property_id
+    # Role-based filtering: cleaners only see their assigned turnovers
+    if user.get("role") in ["cleaner"]:
+        query["assigned_provider_id"] = user["id"]
     turnovers = await db.turnovers.find(query).sort("due_at", 1).to_list(100)
     result = []
     for t in turnovers:
@@ -42,6 +46,7 @@ async def list_turnovers(request: Request, status: Optional[str] = None, propert
                 prop = await db.properties.find_one({"_id": ObjectId(t["property_id"])})
                 doc["property_name"] = prop.get("name", "") if prop else ""
                 doc["property_address"] = prop.get("address_1", "") if prop else ""
+                doc["property_photo"] = prop.get("cover_photo_url", "") if prop else ""
             except Exception:
                 doc["property_name"] = ""
                 doc["property_address"] = ""
@@ -142,6 +147,28 @@ async def update_turnover(turnover_id: str, input: TurnoverUpdate, request: Requ
         update["completed_at"] = datetime.now(timezone.utc).isoformat()
     await db.turnovers.update_one({"_id": ObjectId(turnover_id)}, {"$set": update})
     updated = await db.turnovers.find_one({"_id": ObjectId(turnover_id)})
+    # Send notifications to admins on status changes
+    if input.status:
+        existing = await db.turnovers.find_one({"_id": ObjectId(turnover_id)})
+        prop_name = ""
+        if existing and existing.get("property_id"):
+            try:
+                prop = await db.properties.find_one({"_id": ObjectId(existing["property_id"])})
+                prop_name = prop.get("name", "") if prop else ""
+            except Exception:
+                pass
+        title_map = {
+            "in_progress": f"Turnover Started: {prop_name}",
+            "ready_for_inspection": f"Ready for Inspection: {prop_name}",
+            "completed": f"Turnover Completed: {prop_name}",
+        }
+        body_map = {
+            "in_progress": f"Cleaning has started at {prop_name}. {user.get('first_name', '')} {user.get('last_name', '')} is on site.",
+            "ready_for_inspection": f"{prop_name} is ready for inspection. Cleaning complete by {user.get('first_name', '')}.",
+            "completed": f"Turnover at {prop_name} has been marked complete.",
+        }
+        if input.status in title_map:
+            await notify_admins(db, "turnover_status", title_map[input.status], body_map[input.status], f"/turnover/{turnover_id}")
     return serialize_doc(updated)
 
 @router.get("/{turnover_id}/checklist")

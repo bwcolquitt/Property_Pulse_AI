@@ -69,6 +69,9 @@ async def list_issues(
         query["assigned_provider_id"] = None
     if blocks_check_in:
         query["blocks_check_in"] = True
+    # Role-based filtering: maintenance techs only see their assigned issues
+    if user.get("role") == "maintenance_technician":
+        query["assigned_provider_id"] = user["id"]
 
     issues = await db.issues.find(query).sort("created_at", -1).to_list(200)
     result = []

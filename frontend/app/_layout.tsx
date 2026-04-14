@@ -30,6 +30,7 @@ export default function RootLayout() {
         <Stack.Screen name="inspections" options={{ headerShown: true, title: 'Inspections' }} />
         <Stack.Screen name="inventory" options={{ headerShown: true, title: 'Inventory' }} />
         <Stack.Screen name="calendar" options={{ headerShown: true, title: 'Calendar' }} />
+        <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications' }} />
       </Stack>
     </AuthProvider>
   );

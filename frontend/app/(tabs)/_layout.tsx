@@ -1,34 +1,67 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
-import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
-import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import api from '../../src/utils/api';
 
 function HeaderLogo() {
+  const router = useRouter();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/notifications/count');
+        setUnread(data.unread_count || 0);
+      } catch {}
+    })();
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await api.get('/notifications/count');
+        setUnread(data.unread_count || 0);
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <View style={hStyles.row}>
-      <Svg width={28} height={28} viewBox="0 0 64 64">
-        <Path d="M32 8 L56 28 L56 56 L8 56 L8 28 Z" fill="none" stroke="#0A4F7F" strokeWidth="3.5" strokeLinejoin="round" />
-        <Path d="M32 8 L56 28" fill="none" stroke="#DDA239" strokeWidth="3.5" strokeLinecap="round" />
-        <Path d="M32 8 L8 28" fill="none" stroke="#0A4F7F" strokeWidth="3.5" strokeLinecap="round" />
-        <Path d="M4 38 L18 38 L23 28 L28 48 L33 22 L38 44 L43 34 L48 38 L60 38" fill="none" stroke="#DDA239" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        <Rect x="26" y="42" width="12" height="14" rx="2" fill="#7AA3B9" opacity={0.3} />
-        <Circle cx="35" cy="50" r="1.5" fill="#0A4F7F" />
-      </Svg>
-      <Text style={hStyles.brand}>
-        <Text style={{ color: '#0A4F7F' }}>Property</Text>
-        <Text style={{ color: '#DDA239' }}> Pulse</Text>
-      </Text>
+    <View style={hStyles.container}>
+      <View style={hStyles.row}>
+        <Svg width={28} height={28} viewBox="0 0 64 64">
+          <Path d="M32 8 L56 28 L56 56 L8 56 L8 28 Z" fill="none" stroke="#0A4F7F" strokeWidth="3.5" strokeLinejoin="round" />
+          <Path d="M32 8 L56 28" fill="none" stroke="#DDA239" strokeWidth="3.5" strokeLinecap="round" />
+          <Path d="M32 8 L8 28" fill="none" stroke="#0A4F7F" strokeWidth="3.5" strokeLinecap="round" />
+          <Path d="M4 38 L18 38 L23 28 L28 48 L33 22 L38 44 L43 34 L48 38 L60 38" fill="none" stroke="#DDA239" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <Rect x="26" y="42" width="12" height="14" rx="2" fill="#7AA3B9" opacity={0.3} />
+          <Circle cx="35" cy="50" r="1.5" fill="#0A4F7F" />
+        </Svg>
+        <Text style={hStyles.brand}>
+          <Text style={{ color: '#0A4F7F' }}>Property</Text>
+          <Text style={{ color: '#DDA239' }}> Pulse</Text>
+        </Text>
+      </View>
+      <TouchableOpacity testID="notifications-bell" style={hStyles.bellBtn} onPress={() => router.push('/notifications' as any)}>
+        <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
+        {unread > 0 && (
+          <View style={hStyles.badge}>
+            <Text style={hStyles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
 
 const hStyles = StyleSheet.create({
+  container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingRight: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   brand: { fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  bellBtn: { position: 'relative', padding: 4 },
+  badge: { position: 'absolute', top: 0, right: 0, backgroundColor: '#EF4444', borderRadius: 9, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
+  badgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
 });
 
 export default function TabLayout() {
