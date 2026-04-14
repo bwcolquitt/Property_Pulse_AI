@@ -1,84 +1,231 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, TextInput, Modal, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../src/constants/theme';
+import { useAuth } from '../src/context/AuthContext';
 import api from '../src/utils/api';
 
 export default function InventoryScreen() {
+  const { user } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [catFilter, setCatFilter] = useState('all');
+  const [categories, setCategories] = useState<any[]>([]);
+  const [adjustModal, setAdjustModal] = useState<any>(null);
+  const [adjustQty, setAdjustQty] = useState('1');
+  const [adjustAction, setAdjustAction] = useState<'add' | 'remove'>('remove');
+  const [qrModal, setQrModal] = useState<any>(null);
+  const [qrLoading, setQrLoading] = useState(false);
 
-  const fetch = async () => {
+  const isAdmin = user?.role === 'property_manager' || user?.role === 'super_admin';
+
+  const fetchItems = async () => {
     try {
       const params: any = {};
       if (filter === 'low_stock') params.low_stock = true;
-      const { data } = await api.get('/inventory', { params });
+      if (catFilter !== 'all') params.category = catFilter;
+      const { data } = await api.get('/inventory-v2/items', { params });
       setItems(data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { setLoading(true); fetch(); }, [filter]);
+  const fetchCategories = async () => {
+    try {
+      const { data } = await api.get('/inventory-v2/categories');
+      setCategories(data);
+    } catch {}
+  };
+
+  useEffect(() => { setLoading(true); fetchItems(); fetchCategories(); }, [filter, catFilter]);
+
+  const handleAdjust = async () => {
+    if (!adjustModal) return;
+    const qty = parseInt(adjustQty) || 0;
+    if (qty <= 0) { Alert.alert('Invalid', 'Enter a quantity greater than 0'); return; }
+    try {
+      const change = adjustAction === 'add' ? qty : -qty;
+      const { data } = await api.post('/inventory-v2/adjust', { item_id: adjustModal.id, quantity: change, reason: `Manual ${adjustAction}` });
+      Alert.alert('Updated', `${adjustModal.name}: ${data.previous_qty} → ${data.new_qty}`);
+      setAdjustModal(null);
+      setAdjustQty('1');
+      fetchItems();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.detail || 'Failed to adjust');
+    }
+  };
+
+  const showQR = async (item: any) => {
+    setQrLoading(true);
+    setQrModal(item);
+    try {
+      const { data } = await api.get(`/inventory-v2/items/${item.id}/qr`);
+      setQrModal({ ...item, qr_base64: data.qr_code_base64 });
+    } catch {}
+    finally { setQrLoading(false); }
+  };
+
+  const catColors: Record<string, string> = {
+    cleaning: Colors.secondary, pool_chemicals: Colors.blueAssigned, outdoor: Colors.greenReady,
+    batteries: Colors.accent, linens: Colors.purpleAwaiting, toiletries: '#E879A0',
+    maintenance: Colors.primary, general: Colors.grayInactive,
+  };
+  const catIcons: Record<string, string> = {
+    cleaning: 'sparkles', pool_chemicals: 'water', outdoor: 'leaf',
+    batteries: 'battery-charging', linens: 'shirt', toiletries: 'water',
+    maintenance: 'construct', general: 'cube',
+  };
 
   if (loading) return <View style={styles.loading}><ActivityIndicator size="large" color={Colors.primary} /></View>;
 
   return (
     <View style={styles.container}>
-      <FlatList
-        horizontal showsHorizontalScrollIndicator={false}
-        data={['all', 'low_stock']}
-        keyExtractor={f => f}
-        contentContainerStyle={styles.filterRow}
-        renderItem={({ item: f }) => (
-          <TouchableOpacity testID={`filter-${f}`} style={[styles.filterBtn, filter === f && styles.filterActive]} onPress={() => setFilter(f)}>
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>{f === 'all' ? 'All Items' : 'Low Stock'}</Text>
+      {/* Stock/Low Stock filter */}
+      <View style={styles.topFilters}>
+        {['all', 'low_stock'].map(f => (
+          <TouchableOpacity key={f} testID={`filter-${f}`} style={[styles.pill, filter === f && styles.pillActive]} onPress={() => setFilter(f)}>
+            <Text style={[styles.pillText, filter === f && styles.pillTextActive]}>{f === 'all' ? 'All Items' : 'Low Stock'}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Category chips */}
+      <FlatList horizontal showsHorizontalScrollIndicator={false} data={[{ category: 'all', count: items.length }, ...categories]} keyExtractor={c => c.category} contentContainerStyle={styles.catRow}
+        renderItem={({ item: c }) => (
+          <TouchableOpacity testID={`cat-${c.category}`} style={[styles.catChip, catFilter === c.category && { backgroundColor: catColors[c.category] || Colors.primary, borderColor: catColors[c.category] || Colors.primary }]} onPress={() => setCatFilter(c.category)}>
+            {c.category !== 'all' && <Ionicons name={(catIcons[c.category] || 'cube') as any} size={13} color={catFilter === c.category ? '#fff' : Colors.textSecondary} />}
+            <Text style={[styles.catText, catFilter === c.category && { color: '#fff' }]}>{c.category === 'all' ? 'All' : c.category.replace(/_/g, ' ')}</Text>
           </TouchableOpacity>
         )}
       />
+
       <FlatList
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={fetch} tintColor={Colors.primary} />}
-        renderItem={({ item }) => (
-          <View testID={`inv-${item.id}`} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.catIcon, { backgroundColor: item.category === 'linens' ? Colors.blueAssigned + '15' : item.category === 'toiletries' ? Colors.purpleAwaiting + '15' : item.category === 'cleaning' ? Colors.greenReady + '15' : Colors.accent + '15' }]}>
-                <Ionicons name={item.category === 'linens' ? 'shirt' : item.category === 'toiletries' ? 'water' : item.category === 'cleaning' ? 'sparkles' : 'cafe'} size={20} color={item.category === 'linens' ? Colors.blueAssigned : item.category === 'toiletries' ? Colors.purpleAwaiting : item.category === 'cleaning' ? Colors.greenReady : Colors.accent} />
+        refreshControl={<RefreshControl refreshing={false} onRefresh={fetchItems} tintColor={Colors.primary} />}
+        renderItem={({ item }) => {
+          const color = catColors[item.category] || Colors.grayInactive;
+          return (
+            <View testID={`inv-item-${item.id}`} style={styles.card}>
+              <View style={styles.cardTop}>
+                <View style={[styles.catIcon, { backgroundColor: color + '18' }]}>
+                  <Ionicons name={(catIcons[item.category] || 'cube') as any} size={20} color={color} />
+                </View>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemSku}>{item.sku} · {item.unit_type}</Text>
+                </View>
+                {item.is_low_stock && <View style={styles.lowBadge}><Ionicons name="warning" size={13} color={Colors.redUrgent} /><Text style={styles.lowText}>Low</Text></View>}
               </View>
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardSub}>{item.property_name} · {item.category}</Text>
+
+              {/* Location & Storage */}
+              <View style={styles.locationRow}>
+                <Ionicons name="location" size={13} color={Colors.textSecondary} />
+                <Text style={styles.locationText}>{item.location || 'No location'}</Text>
+                {item.storage_area ? <><Ionicons name="cube-outline" size={13} color={Colors.textSecondary} /><Text style={styles.locationText}>{item.storage_area}</Text></> : null}
               </View>
-              {item.is_low_stock && (
-                <View style={styles.lowBadge}><Ionicons name="warning" size={14} color={Colors.redUrgent} /><Text style={styles.lowText}>Low</Text></View>
-              )}
+              {item.property_name ? <Text style={styles.propName}>{item.property_name}</Text> : null}
+
+              {/* Quantities */}
+              <View style={styles.qtyRow}>
+                <View style={styles.qtyBox}>
+                  <Text style={[styles.qtyNum, item.is_low_stock && { color: Colors.redUrgent }]}>{item.quantity_on_hand}</Text>
+                  <Text style={styles.qtyLabel}>On Hand</Text>
+                </View>
+                <View style={styles.qtyDivider} />
+                <View style={styles.qtyBox}>
+                  <Text style={styles.qtyNum}>{item.par_level}</Text>
+                  <Text style={styles.qtyLabel}>Par</Text>
+                </View>
+                <View style={styles.qtyDivider} />
+                <View style={styles.qtyBox}>
+                  <Text style={styles.qtyNum}>{item.reorder_level}</Text>
+                  <Text style={styles.qtyLabel}>Reorder</Text>
+                </View>
+              </View>
+
+              {/* Stock bar */}
+              <View style={styles.stockBar}>
+                <View style={[styles.stockFill, { width: `${Math.min(100, (item.quantity_on_hand / Math.max(item.par_level, 1)) * 100)}%`, backgroundColor: item.is_low_stock ? Colors.redUrgent : Colors.greenReady }]} />
+              </View>
+
+              {/* Action buttons */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity testID={`remove-${item.id}`} style={[styles.actionBtn, { backgroundColor: Colors.redUrgent + '12' }]} onPress={() => { setAdjustModal(item); setAdjustAction('remove'); setAdjustQty('1'); }}>
+                  <Ionicons name="remove-circle" size={16} color={Colors.redUrgent} />
+                  <Text style={[styles.actionText, { color: Colors.redUrgent }]}>Remove</Text>
+                </TouchableOpacity>
+                {(isAdmin || item.allow_user_add) && (
+                  <TouchableOpacity testID={`add-${item.id}`} style={[styles.actionBtn, { backgroundColor: Colors.greenReady + '12' }]} onPress={() => { setAdjustModal(item); setAdjustAction('add'); setAdjustQty('1'); }}>
+                    <Ionicons name="add-circle" size={16} color={Colors.greenReady} />
+                    <Text style={[styles.actionText, { color: Colors.greenReady }]}>Add</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity testID={`qr-${item.id}`} style={[styles.actionBtn, { backgroundColor: Colors.primary + '12' }]} onPress={() => showQR(item)}>
+                  <Ionicons name="qr-code" size={16} color={Colors.primary} />
+                  <Text style={[styles.actionText, { color: Colors.primary }]}>QR</Text>
+                </TouchableOpacity>
+              </View>
+
+              {item.allow_user_add && <View style={styles.userAddBadge}><Ionicons name="person-add" size={11} color={Colors.secondary} /><Text style={styles.userAddText}>Users can add stock</Text></View>}
             </View>
-            <View style={styles.levelsRow}>
-              <View style={styles.levelItem}>
-                <Text style={[styles.levelNum, item.is_low_stock && { color: Colors.redUrgent }]}>{item.quantity_on_hand}</Text>
-                <Text style={styles.levelLabel}>On Hand</Text>
-              </View>
-              <View style={styles.levelDivider} />
-              <View style={styles.levelItem}>
-                <Text style={styles.levelNum}>{item.par_level}</Text>
-                <Text style={styles.levelLabel}>Par Level</Text>
-              </View>
-              <View style={styles.levelDivider} />
-              <View style={styles.levelItem}>
-                <Text style={styles.levelNum}>{item.reorder_level}</Text>
-                <Text style={styles.levelLabel}>Reorder At</Text>
-              </View>
+          );
+        }}
+        ListEmptyComponent={<View style={styles.empty}><Ionicons name="cube-outline" size={48} color={Colors.grayInactive} /><Text style={styles.emptyText}>No items found</Text></View>}
+      />
+
+      {/* Adjust Quantity Modal */}
+      <Modal visible={!!adjustModal} transparent animationType="fade" onRequestClose={() => setAdjustModal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>{adjustAction === 'add' ? 'Add Stock' : 'Remove Stock'}</Text>
+            <Text style={styles.modalItem}>{adjustModal?.name}</Text>
+            <Text style={styles.modalCurrent}>Current: {adjustModal?.quantity_on_hand} {adjustModal?.unit_type}</Text>
+            <View style={styles.qtyInputRow}>
+              <TouchableOpacity style={styles.qtyBtn} onPress={() => setAdjustQty(String(Math.max(1, (parseInt(adjustQty) || 1) - 1)))}>
+                <Ionicons name="remove" size={24} color={Colors.primary} />
+              </TouchableOpacity>
+              <TextInput testID="qty-input" style={styles.qtyInput} value={adjustQty} onChangeText={setAdjustQty} keyboardType="numeric" />
+              <TouchableOpacity style={styles.qtyBtn} onPress={() => setAdjustQty(String((parseInt(adjustQty) || 0) + 1))}>
+                <Ionicons name="add" size={24} color={Colors.primary} />
+              </TouchableOpacity>
             </View>
-            {/* Progress bar showing stock level */}
-            <View style={styles.stockBar}>
-              <View style={[styles.stockFill, { width: `${Math.min(100, (item.quantity_on_hand / Math.max(item.par_level, 1)) * 100)}%`, backgroundColor: item.is_low_stock ? Colors.redUrgent : Colors.greenReady }]} />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setAdjustModal(null)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="confirm-adjust" style={[styles.modalConfirm, { backgroundColor: adjustAction === 'add' ? Colors.greenReady : Colors.redUrgent }]} onPress={handleAdjust}>
+                <Text style={styles.modalConfirmText}>{adjustAction === 'add' ? 'Add' : 'Remove'} {adjustQty}</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        )}
-        ListEmptyComponent={<View style={styles.empty}><Ionicons name="cube-outline" size={48} color={Colors.grayInactive} /><Text style={styles.emptyText}>No inventory items</Text></View>}
-      />
+        </View>
+      </Modal>
+
+      {/* QR Code Modal */}
+      <Modal visible={!!qrModal} transparent animationType="fade" onRequestClose={() => setQrModal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modal, styles.qrModalContent]}>
+            <Text style={styles.modalTitle}>Inventory QR Code</Text>
+            <Text style={styles.modalItem}>{qrModal?.name}</Text>
+            <Text style={styles.qrSku}>{qrModal?.sku}</Text>
+            {qrLoading ? (
+              <ActivityIndicator size="large" color={Colors.primary} style={{ marginVertical: 20 }} />
+            ) : qrModal?.qr_base64 ? (
+              <View style={styles.qrContainer}>
+                <Image source={{ uri: `data:image/png;base64,${qrModal.qr_base64}` }} style={styles.qrImage} resizeMode="contain" />
+              </View>
+            ) : null}
+            <Text style={styles.qrNote}>Inverted QR (white on navy) for printing</Text>
+            <Text style={styles.qrLocation}>{qrModal?.location} · {qrModal?.storage_area}</Text>
+            <TouchableOpacity style={styles.qrCloseBtn} onPress={() => setQrModal(null)}>
+              <Text style={styles.qrCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -86,27 +233,61 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  filterRow: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, gap: Spacing.sm },
-  filterBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
-  filterActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
-  filterTextActive: { color: Colors.primaryForeground },
+  topFilters: { flexDirection: 'row', paddingHorizontal: Spacing.md, paddingTop: Spacing.sm, gap: Spacing.sm },
+  pill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
+  pillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  pillText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  pillTextActive: { color: Colors.primaryForeground },
+  catRow: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, gap: 6 },
+  catChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
+  catText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary, textTransform: 'capitalize' },
   list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 30 },
-  card: { backgroundColor: Colors.surface, borderRadius: 12, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  catIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  card: { backgroundColor: Colors.surface, borderRadius: 12, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: 8 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  catIcon: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  cardSub: { fontSize: 12, color: Colors.textSecondary },
+  itemName: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+  itemSku: { fontSize: 11, color: Colors.textSecondary },
   lowBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: Colors.redUrgent + '12', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   lowText: { fontSize: 11, fontWeight: '700', color: Colors.redUrgent },
-  levelsRow: { flexDirection: 'row', alignItems: 'center' },
-  levelItem: { flex: 1, alignItems: 'center' },
-  levelNum: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
-  levelLabel: { fontSize: 11, color: Colors.textSecondary },
-  levelDivider: { width: 1, height: 30, backgroundColor: Colors.border },
-  stockBar: { height: 6, backgroundColor: Colors.surfaceSecondary, borderRadius: 3 },
-  stockFill: { height: 6, borderRadius: 3 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+  locationText: { fontSize: 12, color: Colors.textSecondary },
+  propName: { fontSize: 11, color: Colors.primary, fontWeight: '600' },
+  qtyRow: { flexDirection: 'row', alignItems: 'center' },
+  qtyBox: { flex: 1, alignItems: 'center' },
+  qtyNum: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
+  qtyLabel: { fontSize: 10, color: Colors.textSecondary },
+  qtyDivider: { width: 1, height: 28, backgroundColor: Colors.border },
+  stockBar: { height: 5, backgroundColor: Colors.surfaceSecondary, borderRadius: 3 },
+  stockFill: { height: 5, borderRadius: 3 },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 8 },
+  actionText: { fontSize: 12, fontWeight: '700' },
+  userAddBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
+  userAddText: { fontSize: 10, fontWeight: '600', color: Colors.secondary },
   empty: { alignItems: 'center', paddingVertical: 60, gap: Spacing.sm },
   emptyText: { fontSize: 15, color: Colors.textSecondary },
+  // Modals
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
+  modal: { backgroundColor: Colors.surface, borderRadius: 16, padding: Spacing.lg, width: '100%', maxWidth: 360, gap: Spacing.sm },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center' },
+  modalItem: { fontSize: 16, fontWeight: '600', color: Colors.textPrimary, textAlign: 'center' },
+  modalCurrent: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
+  qtyInputRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
+  qtyBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.surfaceSecondary, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
+  qtyInput: { width: 80, height: 50, fontSize: 24, fontWeight: '800', textAlign: 'center', color: Colors.textPrimary, backgroundColor: Colors.surfaceSecondary, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
+  modalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+  modalCancel: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
+  modalCancelText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
+  modalConfirm: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10 },
+  modalConfirmText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  // QR Modal
+  qrModalContent: { alignItems: 'center' },
+  qrSku: { fontSize: 13, color: Colors.textSecondary },
+  qrContainer: { backgroundColor: Colors.primary, borderRadius: 12, padding: 8, marginVertical: Spacing.sm },
+  qrImage: { width: 200, height: 200 },
+  qrNote: { fontSize: 11, color: Colors.textSecondary, fontStyle: 'italic' },
+  qrLocation: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  qrCloseBtn: { backgroundColor: Colors.primary, paddingHorizontal: 40, paddingVertical: 12, borderRadius: 10, marginTop: Spacing.sm },
+  qrCloseText: { fontSize: 15, fontWeight: '700', color: Colors.primaryForeground },
 });

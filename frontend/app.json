@@ -9,14 +9,26 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Track your location at properties for auto-checkout",
+        "NSLocationAlwaysUsageDescription": "Monitor geofence for auto-completing checklists",
+        "NSCameraUsageDescription": "Take photos of completed tasks and scan QR codes",
+        "NSPhotoLibraryUsageDescription": "Upload photos from your gallery"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA"
+      ]
     },
     "web": {
       "bundler": "metro",
