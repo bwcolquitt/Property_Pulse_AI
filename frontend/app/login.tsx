@@ -51,7 +51,7 @@ export default function LoginScreen() {
             </Svg>
           </View>
           <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to Property Pulse</Text>
+          <Text style={styles.subtitle}>Sign in to Property Pulse AI</Text>
         </View>
 
         {error ? (

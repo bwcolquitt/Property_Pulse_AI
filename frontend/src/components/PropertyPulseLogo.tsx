@@ -85,10 +85,11 @@ export default function PropertyPulseLogo({ size = 48, showTagline = false }: Lo
           <Text style={[styles.brandName, { fontSize: size * 0.42 }]}>
             <Text style={{ color: NAVY }}>Property</Text>
             <Text style={{ color: GOLD }}> Pulse</Text>
+            <Text style={{ color: NAVY }}> AI</Text>
           </Text>
           {showTagline && (
             <Text style={[styles.tagline, { fontSize: size * 0.2 }]}>
-              The operating system for short-term rental readiness
+              AI-powered short-term rental readiness
             </Text>
           )}
         </View>

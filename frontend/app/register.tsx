@@ -43,7 +43,7 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <Text style={styles.title}>Create your account</Text>
-        <Text style={styles.subtitle}>Join PropertyPulse today</Text>
+        <Text style={styles.subtitle}>Join Property Pulse AI today</Text>
 
         {error ? (
           <View style={styles.errorBox}>

@@ -33,7 +33,7 @@ export default function SettingsScreen() {
     { title: 'Support', items: [
       { icon: 'help-circle', label: 'Help Center', desc: 'FAQ and guides', route: '' },
       { icon: 'chatbubble-ellipses', label: 'Contact Support', desc: '24/7 support', route: '' },
-      { icon: 'information-circle', label: 'About', desc: 'Property Pulse v2.0', route: '' },
+      { icon: 'information-circle', label: 'About', desc: 'Property Pulse AI v2.0', route: '' },
     ]},
   ];
 

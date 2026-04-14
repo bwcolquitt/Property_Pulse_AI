@@ -204,22 +204,60 @@ export default function InventoryScreen() {
         </View>
       </Modal>
 
-      {/* QR Code Modal */}
+      {/* QR Code Modal - Fold & Hang Label Design */}
       <Modal visible={!!qrModal} transparent animationType="fade" onRequestClose={() => setQrModal(null)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modal, styles.qrModalContent]}>
-            <Text style={styles.modalTitle}>Inventory QR Code</Text>
-            <Text style={styles.modalItem}>{qrModal?.name}</Text>
-            <Text style={styles.qrSku}>{qrModal?.sku}</Text>
-            {qrLoading ? (
-              <ActivityIndicator size="large" color={Colors.primary} style={{ marginVertical: 20 }} />
-            ) : qrModal?.qr_base64 ? (
-              <View style={styles.qrContainer}>
-                <Image source={{ uri: `data:image/png;base64,${qrModal.qr_base64}` }} style={styles.qrImage} resizeMode="contain" />
+            {/* Fold instructions (upside down on print) */}
+            <View style={styles.foldInstructions}>
+              <Ionicons name="cut-outline" size={14} color={Colors.grayInactive} />
+              <Text style={styles.foldLine}>- - - - FOLD HERE - then hang on box - - - -</Text>
+              <Ionicons name="cut-outline" size={14} color={Colors.grayInactive} />
+            </View>
+
+            {/* The Label Card */}
+            <View style={styles.labelCard}>
+              {/* Category header */}
+              <Text style={styles.labelCategory}>INVENTORY CODE</Text>
+
+              {/* Big identifier */}
+              <Text style={styles.labelId}>{qrModal?.sku || 'N/A'}</Text>
+
+              {/* QR Code */}
+              {qrLoading ? (
+                <ActivityIndicator size="large" color={Colors.primaryForeground} style={{ marginVertical: 20 }} />
+              ) : qrModal?.qr_base64 ? (
+                <View style={styles.qrContainer}>
+                  <Image source={{ uri: `data:image/png;base64,${qrModal.qr_base64}` }} style={styles.qrImage} resizeMode="contain" />
+                </View>
+              ) : null}
+
+              {/* Scan instruction */}
+              <Text style={styles.labelScan}>Scan to find in Property Pulse AI</Text>
+
+              {/* Divider */}
+              <View style={styles.labelDivider} />
+
+              {/* Item details */}
+              <Text style={styles.labelItemName}>{qrModal?.name}</Text>
+              <Text style={styles.labelItemDetail}>{qrModal?.category || 'General'}</Text>
+
+              {/* Location badge */}
+              <View style={styles.labelLocationBadge}>
+                <Text style={styles.labelLocationText}>{qrModal?.location}{qrModal?.storage_area ? ` > ${qrModal.storage_area}` : ''}</Text>
               </View>
-            ) : null}
-            <Text style={styles.qrNote}>Inverted QR (white on navy) for printing</Text>
-            <Text style={styles.qrLocation}>{qrModal?.location} · {qrModal?.storage_area}</Text>
+
+              {/* Property name */}
+              {qrModal?.property_name && (
+                <Text style={styles.labelProp}>{qrModal.property_name}</Text>
+              )}
+
+              {/* Brand footer */}
+              <Text style={styles.labelBrand}>PROPERTY PULSE AI</Text>
+            </View>
+
+            <Text style={styles.foldHint}>Print, fold in half, and hang on storage box</Text>
+
             <TouchableOpacity style={styles.qrCloseBtn} onPress={() => setQrModal(null)}>
               <Text style={styles.qrCloseText}>Close</Text>
             </TouchableOpacity>
@@ -281,13 +319,24 @@ const styles = StyleSheet.create({
   modalCancelText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
   modalConfirm: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10 },
   modalConfirmText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  // QR Modal
-  qrModalContent: { alignItems: 'center' },
-  qrSku: { fontSize: 13, color: Colors.textSecondary },
-  qrContainer: { backgroundColor: Colors.primary, borderRadius: 12, padding: 8, marginVertical: Spacing.sm },
-  qrImage: { width: 200, height: 200 },
-  qrNote: { fontSize: 11, color: Colors.textSecondary, fontStyle: 'italic' },
-  qrLocation: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  // QR Modal - Fold & Hang Label
+  qrModalContent: { alignItems: 'center', paddingHorizontal: Spacing.md },
+  foldInstructions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
+  foldLine: { fontSize: 10, fontWeight: '700', color: Colors.grayInactive, letterSpacing: 1, textTransform: 'uppercase' },
+  labelCard: { backgroundColor: '#1A2E3B', borderRadius: 14, padding: Spacing.md, width: '100%', alignItems: 'center', gap: 6, borderWidth: 2, borderColor: '#2A4E5B' },
+  labelCategory: { fontSize: 9, fontWeight: '700', color: Colors.accent, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 },
+  labelId: { fontSize: 32, fontWeight: '900', color: '#FFFFFF', letterSpacing: 1 },
+  qrContainer: { backgroundColor: '#FFFFFF', borderRadius: 8, padding: 6, marginVertical: 6 },
+  qrImage: { width: 160, height: 160 },
+  labelScan: { fontSize: 10, fontWeight: '600', color: '#7AA3B9', fontStyle: 'italic' },
+  labelDivider: { height: 1, backgroundColor: '#3A5E6B', width: '80%', marginVertical: 6 },
+  labelItemName: { fontSize: 16, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' },
+  labelItemDetail: { fontSize: 12, color: '#7AA3B9', textTransform: 'capitalize' },
+  labelLocationBadge: { backgroundColor: Colors.accent + '30', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, marginTop: 4 },
+  labelLocationText: { fontSize: 12, fontWeight: '700', color: Colors.accent },
+  labelProp: { fontSize: 11, color: '#7AA3B9', marginTop: 2 },
+  labelBrand: { fontSize: 8, fontWeight: '700', color: '#4A6E7B', letterSpacing: 2, marginTop: 6 },
+  foldHint: { fontSize: 11, color: Colors.textSecondary, fontStyle: 'italic', textAlign: 'center', marginTop: Spacing.sm },
   qrCloseBtn: { backgroundColor: Colors.primary, paddingHorizontal: 40, paddingVertical: 12, borderRadius: 10, marginTop: Spacing.sm },
   qrCloseText: { fontSize: 15, fontWeight: '700', color: Colors.primaryForeground },
 });

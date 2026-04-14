@@ -30,19 +30,19 @@ export default function LandingScreen() {
         <View style={styles.divider} />
         <Text style={styles.heroTitle}>Get every property{'\n'}guest-ready on time</Text>
         <Text style={styles.heroSubtitle}>
-          The operating system for short-term rental readiness. Turnovers, maintenance, inspections, and vendor management — unified.
+          The AI-powered operating system for short-term rental readiness. Smarter turnovers, maintenance, inspections, and vendor coordination in one place.
         </Text>
       </View>
 
       {/* Features */}
       <View style={styles.features}>
         {[
-          { icon: 'checkmark-circle', title: 'Smart Turnovers', desc: 'Auto-schedule from reservations with AI checklists' },
-          { icon: 'construct', title: 'Maintenance HQ', desc: 'Never miss an open issue — top-level visibility' },
-          { icon: 'camera', title: 'Photo Proof', desc: 'Before & after documentation with upload' },
-          { icon: 'people', title: 'Vendor Marketplace', desc: 'Find, bid, and book cleaners instantly' },
-          { icon: 'sparkles', title: 'AI Risk Scoring', desc: 'Predictive readiness powered by GPT-5.2' },
-          { icon: 'calendar', title: 'Calendar Views', desc: 'Visual turnover scheduling at a glance' },
+          { icon: 'checkmark-circle', title: 'AI Smart Turnovers', desc: 'Auto-schedule from reservations with AI-optimized checklists' },
+          { icon: 'construct', title: 'AI Maintenance HQ', desc: 'AI detects patterns and predicts issues before they happen' },
+          { icon: 'camera', title: 'Photo Proof', desc: 'Before & after documentation with AI-verified uploads' },
+          { icon: 'people', title: 'AI Vendor Matching', desc: 'Smart matching, bidding, and scheduling with AI coordination' },
+          { icon: 'sparkles', title: 'AI Risk Scoring', desc: 'Predictive readiness scoring powered by GPT-5.2' },
+          { icon: 'analytics', title: 'AI Insights', desc: 'Automated reporting, cost forecasting, and trend analysis' },
         ].map((f, i) => (
           <View key={i} style={styles.featureCard}>
             <View style={[styles.featureIcon, { backgroundColor: i % 2 === 0 ? Colors.secondary + '25' : Colors.accent + '20' }]}>

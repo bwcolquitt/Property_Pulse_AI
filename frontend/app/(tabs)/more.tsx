@@ -76,7 +76,7 @@ export default function MoreScreen() {
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
 
-      <Text style={styles.version}>Property Pulse v2.0.0</Text>
+      <Text style={styles.version}>Property Pulse AI v2.0.0</Text>
     </ScrollView>
   );
 }

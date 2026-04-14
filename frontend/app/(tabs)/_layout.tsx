@@ -41,6 +41,7 @@ function HeaderLogo() {
         <Text style={hStyles.brand}>
           <Text style={{ color: '#0A4F7F' }}>Property</Text>
           <Text style={{ color: '#DDA239' }}> Pulse</Text>
+          <Text style={{ color: '#0A4F7F' }}> AI</Text>
         </Text>
       </View>
       <TouchableOpacity testID="notifications-bell" style={hStyles.bellBtn} onPress={() => router.push('/notifications' as any)}>
