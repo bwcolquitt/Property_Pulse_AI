@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
+import Svg, { Path, Rect, Circle } from 'react-native-svg';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -40,7 +41,14 @@ export default function LoginScreen() {
 
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Ionicons name="home" size={32} color={Colors.primary} />
+            <Svg width={48} height={48} viewBox="0 0 64 64">
+              <Path d="M32 8 L56 28 L56 56 L8 56 L8 28 Z" fill="none" stroke="#0A4F7F" strokeWidth="3" strokeLinejoin="round" />
+              <Path d="M32 8 L56 28" fill="none" stroke="#DDA239" strokeWidth="3" strokeLinecap="round" />
+              <Path d="M32 8 L8 28" fill="none" stroke="#0A4F7F" strokeWidth="3" strokeLinecap="round" />
+              <Path d="M4 38 L18 38 L23 28 L28 48 L33 22 L38 44 L43 34 L48 38 L60 38" fill="none" stroke="#DDA239" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <Rect x="26" y="42" width="12" height="14" rx="2" fill="#7AA3B9" opacity={0.3} />
+              <Circle cx="35" cy="50" r="1.5" fill="#0A4F7F" />
+            </Svg>
           </View>
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to Property Pulse</Text>
@@ -105,6 +113,7 @@ export default function LoginScreen() {
           {[
             { label: 'Manager', email: 'admin@example.com', pw: 'admin123' },
             { label: 'Cleaner', email: 'maria@example.com', pw: 'cleaner123' },
+            { label: 'Maintenance', email: 'jake@maintenance.com', pw: 'Maint1234!' },
             { label: 'Vendor', email: 'bob@fixitpro.com', pw: 'vendor123' },
           ].map((d, i) => (
             <TouchableOpacity
@@ -130,7 +139,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
   backBtn: { width: 44, height: 44, justifyContent: 'center', marginTop: Spacing.sm },
   header: { alignItems: 'center', marginTop: Spacing.lg, marginBottom: Spacing.xl },
-  iconContainer: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.accent + '20', justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.md },
+  iconContainer: { marginBottom: Spacing.md },
   title: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.3 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.redUrgent + '15', padding: Spacing.md, borderRadius: 8, marginBottom: Spacing.md },
