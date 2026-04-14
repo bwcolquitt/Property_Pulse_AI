@@ -1,0 +1,103 @@
+{
+  "theme": "light",
+  "archetype": "1_organic_earthy",
+  "domain": "hybrid_fullstack_react_native_property_management",
+  "style_concept": "Clean light beach theme. Evokes warmth, approachability, and calm organization using an ocean and sandy color palette. Prioritizes touch-friendly elements, airy spacing, and high legibility for on-the-go property managers, cleaners, and vendors.",
+  "colors": {
+    "background": "#FDFBF7",
+    "surface": "#FFFFFF",
+    "surface_secondary": "#F5F2EA",
+    "border": "#E2E0D9",
+    "primary": "#006D77",
+    "primary_foreground": "#FFFFFF",
+    "secondary": "#83C5BE",
+    "secondary_foreground": "#1A2E35",
+    "accent": "#E29578",
+    "text_primary": "#1E293B",
+    "text_secondary": "#64748B",
+    "status": {
+      "green_ready": "#10B981",
+      "yellow_at_risk": "#F59E0B",
+      "red_urgent": "#EF4444",
+      "blue_assigned": "#3B82F6",
+      "purple_awaiting": "#8B5CF6",
+      "gray_inactive": "#9CA3AF"
+    }
+  },
+  "typography": {
+    "heading_font": "Manrope",
+    "body_font": "Plus Jakarta Sans",
+    "scale": {
+      "h1": { "fontSize": 32, "lineHeight": 40, "letterSpacing": -0.5, "fontWeight": "800" },
+      "h2": { "fontSize": 24, "lineHeight": 32, "letterSpacing": -0.3, "fontWeight": "700" },
+      "h3": { "fontSize": 20, "lineHeight": 28, "letterSpacing": -0.2, "fontWeight": "600" },
+      "body": { "fontSize": 16, "lineHeight": 24, "fontWeight": "400" },
+      "caption": { "fontSize": 12, "lineHeight": 16, "fontWeight": "500", "textTransform": "uppercase", "letterSpacing": 0.5 }
+    }
+  },
+  "spacing_and_layout": {
+    "global_padding": 16,
+    "card_padding": 16,
+    "card_radius": 12,
+    "button_radius": 8,
+    "input_radius": 8,
+    "gap": {
+      "sm": 8,
+      "md": 16,
+      "lg": 24,
+      "xl": 32
+    }
+  },
+  "react_native_component_strategy": {
+    "cards": "Use View components with backgroundColor '#FFFFFF', borderRadius 12, borderWidth 1, borderColor '#E2E0D9'. Minimal elevation (elevation: 1, shadowOpacity: 0.05).",
+    "buttons": "TouchableOpacity for primary actions with backgroundColor '#006D77', paddingVertical 14, borderRadius 8. Text should be Manrope SemiBold 16px.",
+    "inputs": "TextInput wrapped in View with backgroundColor '#F5F2EA' or pure white with border. Height 48px for accessible touch targets.",
+    "checklists": "Row views with minimum 48px height. Circular custom checkboxes. Use green_ready (#10B981) for completed state. Strikethrough text on completion.",
+    "kanban_board": "Horizontal ScrollView wrapping vertical FlatLists. Columns have backgroundColor '#F5F2EA', borderRadius 12.",
+    "icons": "lucide-react-native library. Use strokeWidth 2. Primary icon color matches text_primary or primary color."
+  },
+  "media": {
+    "properties": [
+      {
+        "url": "https://images.unsplash.com/photo-1766430956209-72d1c28a16ec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzF8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBiZWFjaCUyMGhvdXNlJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzc2MTM4OTkxfDA&ixlib=rb-4.1.0&q=85",
+        "category": "property_thumbnail",
+        "description": "Modern beach house living room"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1771218830322-9a29f883025a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzF8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBiZWFjaCUyMGhvdXNlJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzc2MTM4OTkxfDA&ixlib=rb-4.1.0&q=85",
+        "category": "property_thumbnail",
+        "description": "Sunlit living room with beach aesthetics"
+      }
+    ],
+    "cleaning_maintenance": [
+      {
+        "url": "https://images.pexels.com/photos/6160302/pexels-photo-6160302.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "cleaning_supplies",
+        "description": "Pristine cleaning supplies for checklist or marketplace"
+      }
+    ],
+    "users": [
+      {
+        "url": "https://images.pexels.com/photos/8730042/pexels-photo-8730042.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "user_avatar",
+        "description": "Smiling property manager"
+      }
+    ]
+  },
+  "testing_attributes": {
+    "convention": "testID in React Native",
+    "requirement": "All touchable elements, inputs, list items, and key textual statuses must have a testID."
+  },
+  "instructions_to_main_agent": [
+    "This is an Expo React Native app. Do NOT build a React web app.",
+    "Write components in .js or .jsx files, not .tsx as requested by user.",
+    "Use standard React Native components: View, Text, TouchableOpacity, ScrollView, FlatList, TextInput.",
+    "Implement navigation using React Navigation (e.g. @react-navigation/bottom-tabs) for Dashboard, Turnovers, Maintenance, Messages, Settings.",
+    "Apply the defined Light Earthy/Beach theme colors. Ensure high contrast.",
+    "For icons, install and use lucide-react-native. Note: requires react-native-svg.",
+    "For the custom status colors, strictly use the hex codes provided in the colors.status object.",
+    "Build the Kanban board using a horizontal ScrollView containing vertical FlatLists for each column.",
+    "Implement the Cleaning Checklist using FlatList with custom interactive row components.",
+    "All interactive elements MUST have testID attributes following the kebab-case, role-based convention."
+  ]
+}
