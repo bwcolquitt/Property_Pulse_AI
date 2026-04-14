@@ -12,13 +12,14 @@ function RootNavigator() {
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === '(tabs)';
+    const firstSegment = segments[0];
+    const isPublicPage = !firstSegment || firstSegment === 'index' || firstSegment === 'login' || firstSegment === 'register';
 
-    if (user && !inAuthGroup) {
-      // Logged in but not in tabs - redirect to dashboard
+    if (user && isPublicPage) {
+      // Logged in but on landing/login/register - redirect to dashboard
       router.replace('/(tabs)');
-    } else if (!user && inAuthGroup) {
-      // Not logged in but in tabs - redirect to login
+    } else if (!user && !isPublicPage) {
+      // Not logged in but on a protected page - redirect to login
       router.replace('/login');
     }
   }, [user, loading, segments]);
