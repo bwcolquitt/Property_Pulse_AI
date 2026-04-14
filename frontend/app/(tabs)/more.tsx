@@ -1,0 +1,92 @@
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing } from '../../src/constants/theme';
+import { useAuth } from '../../src/context/AuthContext';
+
+const menuItems = [
+  { label: 'Properties', icon: 'home', route: '/property/list', color: Colors.primary },
+  { label: 'Messages', icon: 'chatbubbles', route: '/messages', color: Colors.blueAssigned },
+  { label: 'Reports', icon: 'bar-chart', route: '/reports', color: Colors.purpleAwaiting },
+  { label: 'Team', icon: 'people', route: '/team', color: Colors.secondary },
+  { label: 'Settings', icon: 'settings', route: '/settings', color: Colors.grayInactive },
+];
+
+export default function MoreScreen() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Profile Card */}
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {(user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')}
+          </Text>
+        </View>
+        <View style={styles.profileInfo}>
+          <Text style={styles.profileName}>{user?.first_name} {user?.last_name}</Text>
+          <Text style={styles.profileEmail}>{user?.email}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleText}>{(user?.role || '').replace(/_/g, ' ')}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Menu Items */}
+      <View style={styles.menuSection}>
+        {menuItems.map((item, i) => (
+          <TouchableOpacity
+            key={i}
+            testID={`menu-${item.label.toLowerCase()}`}
+            style={styles.menuItem}
+            onPress={() => router.push(item.route as any)}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: item.color + '15' }]}>
+              <Ionicons name={item.icon as any} size={22} color={item.color} />
+            </View>
+            <Text style={styles.menuLabel}>{item.label}</Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.grayInactive} />
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Logout */}
+      <TouchableOpacity
+        testID="logout-btn"
+        style={styles.logoutBtn}
+        onPress={async () => {
+          await logout();
+          router.replace('/');
+        }}
+      >
+        <Ionicons name="log-out-outline" size={22} color={Colors.redUrgent} />
+        <Text style={styles.logoutText}>Log Out</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.version}>PropertyPulse v1.0.0</Text>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 40 },
+  profileCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 12, padding: Spacing.md, gap: Spacing.md, borderWidth: 1, borderColor: Colors.border },
+  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 20, fontWeight: '700', color: Colors.primaryForeground },
+  profileInfo: { flex: 1, gap: 2 },
+  profileName: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  profileEmail: { fontSize: 13, color: Colors.textSecondary },
+  roleBadge: { backgroundColor: Colors.primary + '12', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', marginTop: 4 },
+  roleText: { fontSize: 11, fontWeight: '700', color: Colors.primary, textTransform: 'capitalize' },
+  menuSection: { backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
+  menuItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  menuIcon: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  menuLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: Colors.textPrimary },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, backgroundColor: Colors.redUrgent + '10', borderRadius: 12, paddingVertical: 14, borderWidth: 1, borderColor: Colors.redUrgent + '30' },
+  logoutText: { fontSize: 16, fontWeight: '700', color: Colors.redUrgent },
+  version: { textAlign: 'center', fontSize: 12, color: Colors.grayInactive, marginTop: Spacing.sm },
+});

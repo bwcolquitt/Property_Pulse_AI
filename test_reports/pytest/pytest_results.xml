@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="26" time="2.967" timestamp="2026-04-14T04:35:07.967516+00:00" hostname="agent-env-8f9edf57-9284-40e3-ba04-3c9800360d84"><testcase classname="tests.test_auth.TestAuth" name="test_health_check" time="0.188" /><testcase classname="tests.test_auth.TestAuth" name="test_login_success_admin" time="0.018"><failure message="requests.exceptions.ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))">/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:787: in urlopen
+    response = self._make_request(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:534: in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:571: in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:1415: in getresponse
+    response.begin()
+/usr/local/lib/python3.11/http/client.py:330: in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:299: in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+E   http.client.RemoteDisconnected: Remote end closed connection without response
+
+During handling of the above exception, another exception occurred:
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:645: in send
+    resp = conn.urlopen(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:841: in urlopen
+    retries = retries.increment(
+/root/.venv/lib/python3.11/site-packages/urllib3/util/retry.py:490: in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/util/util.py:38: in reraise
+    raise value.with_traceback(tb)
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:787: in urlopen
+    response = self._make_request(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:534: in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:571: in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:1415: in getresponse
+    response.begin()
+/usr/local/lib/python3.11/http/client.py:330: in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:299: in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+E   urllib3.exceptions.ProtocolError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+
+During handling of the above exception, another exception occurred:
+tests/test_auth.py:18: in test_login_success_admin
+    response = api_client.post(f"{base_url}/api/auth/login", json={
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:640: in post
+    return self.request("POST", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:592: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:706: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:660: in send
+    raise ConnectionError(err, request=request)
+E   requests.exceptions.ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))</failure></testcase><testcase classname="tests.test_auth.TestAuth" name="test_login_success_cleaner" time="0.388" /><testcase classname="tests.test_auth.TestAuth" name="test_login_invalid_email" time="0.057" /><testcase classname="tests.test_auth.TestAuth" name="test_login_invalid_password" time="0.280" /><testcase classname="tests.test_auth.TestAuth" name="test_get_me_with_token" time="0.343" /><testcase classname="tests.test_auth.TestAuth" name="test_get_me_without_token" time="0.146" /><testcase classname="tests.test_auth.TestAuth" name="test_logout" time="0.061" /><testcase classname="tests.test_dashboard.TestDashboard" name="test_dashboard_stats_authenticated" time="0.063" /><testcase classname="tests.test_dashboard.TestDashboard" name="test_dashboard_stats_unauthenticated" time="0.057" /><testcase classname="tests.test_maintenance.TestMaintenance" name="test_list_issues_outstanding" time="0.067" /><testcase classname="tests.test_maintenance.TestMaintenance" name="test_list_issues_filter_by_priority" time="0.064" /><testcase classname="tests.test_maintenance.TestMaintenance" name="test_list_issues_filter_unassigned" time="0.061" /><testcase classname="tests.test_maintenance.TestMaintenance" name="test_get_issue_by_id" time="0.129" /><testcase classname="tests.test_maintenance.TestMaintenance" name="test_get_issue_invalid_id" time="0.059" /><testcase classname="tests.test_maintenance.TestMaintenance" name="test_issues_unauthenticated" time="0.061" /><testcase classname="tests.test_marketplace.TestMarketplace" name="test_list_providers" time="0.063" /><testcase classname="tests.test_marketplace.TestMarketplace" name="test_get_provider_by_id" time="0.132" /><testcase classname="tests.test_marketplace.TestMarketplace" name="test_get_provider_invalid_id" time="0.058" /><testcase classname="tests.test_marketplace.TestMarketplace" name="test_list_jobs" time="0.064" /><testcase classname="tests.test_marketplace.TestMarketplace" name="test_marketplace_unauthenticated" time="0.065" /><testcase classname="tests.test_turnovers.TestTurnovers" name="test_list_turnovers" time="0.065" /><testcase classname="tests.test_turnovers.TestTurnovers" name="test_list_turnovers_filter_by_status" time="0.062" /><testcase classname="tests.test_turnovers.TestTurnovers" name="test_get_turnover_by_id" time="0.125" /><testcase classname="tests.test_turnovers.TestTurnovers" name="test_get_turnover_invalid_id" time="0.060" /><testcase classname="tests.test_turnovers.TestTurnovers" name="test_turnovers_unauthenticated" time="0.057" /></testsuite></testsuites>
