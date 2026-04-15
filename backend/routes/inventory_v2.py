@@ -27,6 +27,7 @@ class InventoryItemCreate(BaseModel):
     property_id: Optional[str] = None
     allow_user_add: bool = False  # Can cleaners/maintenance add stock?
     qr_code_external: Optional[str] = None  # Third-party QR code ID
+    reorder_url: Optional[str] = None  # External vendor link (e.g., Amazon)
 
 class InventoryAdjust(BaseModel):
     item_id: str
@@ -217,3 +218,20 @@ async def list_categories(request: Request):
     pipeline = [{"$match": {"active": True}}, {"$group": {"_id": "$category", "count": {"$sum": 1}}}]
     result = await db.inventory_items_v2.aggregate(pipeline).to_list(50)
     return [{"category": r["_id"], "count": r["count"]} for r in result]
+
+
+class UpdateReorderUrl(BaseModel):
+    reorder_url: str = ""
+    reorder_level: Optional[int] = None
+
+@router.put("/items/{item_id}/reorder-settings")
+async def update_reorder_settings(item_id: str, input: UpdateReorderUrl, request: Request):
+    db = get_db(request)
+    user = await get_current_user(request, db)
+    updates = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if input.reorder_url is not None:
+        updates["reorder_url"] = input.reorder_url
+    if input.reorder_level is not None:
+        updates["reorder_level"] = input.reorder_level
+    await db.inventory_items_v2.update_one({"_id": ObjectId(item_id)}, {"$set": updates})
+    return {"success": True}

@@ -60,6 +60,8 @@ function RootNavigator() {
       <Stack.Screen name="reservations" options={{ headerShown: true, title: 'Reservations' }} />
       <Stack.Screen name="assets" options={{ headerShown: true, title: 'Property Assets' }} />
       <Stack.Screen name="supply-requests" options={{ headerShown: true, title: 'Supply Requests' }} />
+      <Stack.Screen name="guest-book" options={{ headerShown: false, title: 'Book a Stay' }} />
+      <Stack.Screen name="payment-settings" options={{ headerShown: true, title: 'Payment Settings' }} />
     </Stack>
   );
 }

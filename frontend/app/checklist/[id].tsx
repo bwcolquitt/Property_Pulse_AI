@@ -405,15 +405,50 @@ export default function ChecklistScreen() {
                       </Text>
                     </View>
                   )}
+                  {/* Reference media indicator */}
+                  {(task.reference_photos?.length > 0 || task.reference_video_url) && (
+                    <View style={styles.refMediaRow}>
+                      {task.reference_photos?.length > 0 && (
+                        <View style={styles.refMediaBadge}>
+                          <Ionicons name="image" size={12} color={Colors.blueAssigned} />
+                          <Text style={styles.refMediaText}>Ref Photo</Text>
+                        </View>
+                      )}
+                      {task.reference_video_url && (
+                        <View style={styles.refMediaBadge}>
+                          <Ionicons name="videocam" size={12} color={Colors.purpleAwaiting} />
+                          <Text style={styles.refMediaText}>Ref Video</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </View>
               </TouchableOpacity>
-              {/* Photo buttons */}
+              {/* Photo buttons + Reference upload */}
               <View style={styles.photoActions}>
                 <TouchableOpacity testID={`photo-camera-${task.id}`} style={[styles.photoBtn, needsPhoto && styles.photoBtnUrgent]} onPress={() => takePhoto(task)}>
                   {uploading === task.id ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="camera" size={18} color={needsPhoto ? Colors.redUrgent : Colors.primary} />}
                 </TouchableOpacity>
                 <TouchableOpacity testID={`photo-gallery-${task.id}`} style={styles.photoBtn} onPress={() => pickPhoto(task)}>
                   <Ionicons name="images" size={18} color={Colors.secondary} />
+                </TouchableOpacity>
+                <TouchableOpacity testID={`ref-photo-${task.id}`} style={[styles.photoBtn, { borderColor: Colors.blueAssigned + '40' }]} onPress={async () => {
+                  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.7 });
+                  if (!result.canceled && result.assets?.[0]) {
+                    const asset = result.assets[0];
+                    const isVideo = asset.type === 'video';
+                    try {
+                      await api.post('/media/upload', { 
+                        entity_type: 'checklist_reference', 
+                        entity_id: task.id, 
+                        media_type: isVideo ? 'reference_video' : 'reference_photo',
+                        base64_data: asset.uri 
+                      });
+                      Alert.alert('Uploaded', `Reference ${isVideo ? 'video' : 'photo'} added`);
+                    } catch { Alert.alert('Error', 'Upload failed'); }
+                  }
+                }}>
+                  <Ionicons name="attach" size={18} color={Colors.blueAssigned} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -571,6 +606,10 @@ const styles = StyleSheet.create({
   dragFloor: { fontSize: 10, fontWeight: '600', color: Colors.accent, textTransform: 'uppercase' },
   dragHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.accent + '10', borderBottomWidth: 1, borderBottomColor: Colors.accent + '30' },
   dragHeaderText: { fontSize: 13, fontWeight: '600', color: Colors.accent },
+  // Reference Media
+  refMediaRow: { flexDirection: 'row', gap: 6, marginTop: 2 },
+  refMediaBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: Colors.blueAssigned + '10', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
+  refMediaText: { fontSize: 10, fontWeight: '600', color: Colors.blueAssigned },
   // Empty
   empty: { alignItems: 'center', paddingVertical: 60, gap: Spacing.sm },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },

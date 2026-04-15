@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, TextInput, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, TextInput, Modal, Image, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
@@ -170,6 +170,36 @@ export default function InventoryScreen() {
               </View>
 
               {item.allow_user_add && <View style={styles.userAddBadge}><Ionicons name="person-add" size={11} color={Colors.secondary} /><Text style={styles.userAddText}>Users can add stock</Text></View>}
+
+              {/* Reorder button - shows when low stock */}
+              {item.is_low_stock && (
+                <TouchableOpacity 
+                  style={styles.reorderBtn} 
+                  onPress={() => {
+                    if (item.reorder_url) {
+                      Linking.openURL(item.reorder_url);
+                    } else {
+                      Alert.alert('Set Reorder Link', 'No vendor link set for this item. Add an Amazon or vendor URL in item settings.', [
+                        { text: 'Cancel' },
+                        { text: 'Set URL', onPress: () => {
+                          Alert.prompt?.('Reorder URL', 'Enter vendor link (e.g., Amazon URL)', async (url: string) => {
+                            if (url) {
+                              try {
+                                await api.put(`/inventory-v2/items/${item.id}/reorder-settings`, { reorder_url: url });
+                                fetchItems();
+                              } catch {}
+                            }
+                          }) || Alert.alert('Info', 'Use admin settings to add vendor reorder links');
+                        }},
+                      ]);
+                    }
+                  }}
+                >
+                  <Ionicons name="cart" size={16} color="#fff" />
+                  <Text style={styles.reorderBtnText}>{item.reorder_url ? 'Reorder from Vendor' : 'Set Reorder Link'}</Text>
+                  {item.reorder_url && <Ionicons name="open-outline" size={14} color="#fff" />}
+                </TouchableOpacity>
+              )}
             </View>
           );
         }}
@@ -303,6 +333,8 @@ const styles = StyleSheet.create({
   actionText: { fontSize: 12, fontWeight: '700' },
   userAddBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
   userAddText: { fontSize: 10, fontWeight: '600', color: Colors.secondary },
+  reorderBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: Colors.accent, paddingVertical: 8, borderRadius: 8, marginTop: 6 },
+  reorderBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   empty: { alignItems: 'center', paddingVertical: 60, gap: Spacing.sm },
   emptyText: { fontSize: 15, color: Colors.textSecondary },
   // Modals

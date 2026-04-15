@@ -71,6 +71,14 @@ export default function LandingScreen() {
         >
           <Text style={styles.secondaryBtnText}>Already have an account? Log in</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          testID="guest-book-btn"
+          style={styles.guestBtn}
+          onPress={() => router.push('/guest-book')}
+        >
+          <Ionicons name="calendar-outline" size={18} color={Colors.accent} />
+          <Text style={styles.guestBtnText}>Book a Stay as Guest</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Trust */}
@@ -110,6 +118,8 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: Colors.primaryForeground, fontSize: 17, fontWeight: '700' },
   secondaryBtn: { alignItems: 'center', paddingVertical: Spacing.md },
   secondaryBtnText: { color: Colors.primary, fontSize: 15, fontWeight: '600' },
+  guestBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.accent, backgroundColor: Colors.accent + '08' },
+  guestBtnText: { fontSize: 14, fontWeight: '700', color: Colors.accent },
   trust: { alignItems: 'center', paddingTop: Spacing.xl, paddingHorizontal: Spacing.lg },
   goldBar: { width: 30, height: 3, backgroundColor: Colors.accent, borderRadius: 2, marginBottom: Spacing.md },
   trustText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.md },

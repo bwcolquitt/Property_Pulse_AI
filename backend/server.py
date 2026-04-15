@@ -35,6 +35,8 @@ from routes.reservations import router as reservations_router
 from routes.job_board import router as job_board_router
 from routes.assets import router as assets_router
 from routes.supply_requests import router as supply_requests_router
+from routes.payments import router as payments_router
+from routes.guest_booking import router as guest_booking_router
 from seed import seed_database
 
 # Configure logging
@@ -88,6 +90,8 @@ app.include_router(reservations_router)
 app.include_router(job_board_router)
 app.include_router(assets_router)
 app.include_router(supply_requests_router)
+app.include_router(payments_router)
+app.include_router(guest_booking_router)
 
 # Health check
 @app.get("/api/health")

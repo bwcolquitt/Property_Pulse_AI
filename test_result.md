@@ -210,6 +210,51 @@ backend:
         - agent: "testing"
         - comment: "✅ All endpoints working correctly. Recurring schedules listing and bulk provider availability retrieval working properly. Returns availability data for all active providers with proper data structure."
 
+  - task: "Payment Config API (Stripe configuration)"
+    implemented: true
+    working: true
+    file: "routes/payments.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "GET/PUT /api/payments/config, GET /api/payments/providers, GET /api/payments/history, GET /api/payments/stats. Admin-only Stripe configuration with secret key masking."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ All payment config endpoints working correctly. GET /api/payments/config returns proper structure, PUT updates configuration with secret key masking, providers/history/stats endpoints return empty lists initially. Stripe publishable key saved correctly, secret key properly masked in responses."
+
+  - task: "Guest Booking API (public booking system)"
+    implemented: true
+    working: true
+    file: "routes/guest_booking.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "GET /api/guest-booking/properties (public), POST /api/guest-booking/book (public). No auth required for guest bookings."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Guest booking API working perfectly. GET /api/guest-booking/properties returns 4 properties with correct structure including booked_dates arrays. POST /api/guest-booking/book successfully creates reservations with proper validation, conflict detection, and notification creation. Public endpoints work without authentication."
+
+  - task: "Inventory Reorder Settings API"
+    implemented: true
+    working: true
+    file: "routes/inventory_v2.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "GET /api/inventory-v2/items, PUT /api/inventory-v2/items/{id}/reorder-settings. Enhanced inventory with reorder URL and level configuration."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Inventory reorder settings working correctly. GET /api/inventory-v2/items returns 20 inventory items with proper structure. PUT /api/inventory-v2/items/{id}/reorder-settings successfully updates reorder URL and level settings for inventory management."
+
 metadata:
   created_by: "main_agent"
   version: "2.0"
@@ -410,3 +455,5 @@ agent_communication:
     - message: "✅ COMPREHENSIVE BACKEND TESTING COMPLETED. All 7 major API groups tested successfully with 96.4% pass rate (27/28 tests passed). All core functionality working: Reservations API (CRUD + sync), Job Board API (jobs + bids), Assets API (warranty tracking), Supply Requests API (approval workflow), Enhanced Reports API (all 7 report types), Schedules API (recurring + availability), AI Smart Routes (auto-scheduling with 20s response time). Only minor timeout issue with AI endpoint due to processing time, but functionality confirmed working. Authentication working correctly with JWT tokens. All endpoints properly secured and returning expected data structures."
     - agent: "testing"
     - message: "✅ COMPREHENSIVE FRONTEND TESTING COMPLETED. All 11 screens tested successfully using mobile dimensions 390x844 (iPhone 14). Login flow working perfectly with admin@example.com/admin123 credentials. All major screens functional: Landing Page (PropertyPulse branding), Dashboard (greeting + stats), Inventory (filters + QR codes), Reports (7 report types + CSV export), Job Board, Reservations, Assets, Supply Requests (stats + FAB), AI Command Center (3 AI features), Recurring Schedules (empty state + FAB), Provider Calendar. Authentication guard working correctly. Only minor console error on Assets screen but UI functional. Mobile responsiveness excellent across all screens."
+    - agent: "testing"
+    - message: "✅ NEW BACKEND APIS TESTING COMPLETED - 100% SUCCESS RATE. Tested 3 new API groups with 11 total endpoints: 1) Payment Config API (6 endpoints) - Stripe configuration with secret key masking working perfectly, 2) Guest Booking API (2 endpoints) - Public booking system functional, found 4 properties, successfully created guest booking with conflict detection, 3) Inventory Reorder Settings API (2 endpoints) - Enhanced inventory management with reorder URL/level configuration working correctly. All endpoints properly authenticated where required, public endpoints accessible without auth. Authentication using JWT tokens working correctly."

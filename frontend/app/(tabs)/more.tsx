@@ -19,6 +19,8 @@ const menuItems = [
   { label: 'Job Board', icon: 'briefcase', route: '/job-board', color: Colors.primary },
   { label: 'Supply Requests', icon: 'cart', route: '/supply-requests', color: Colors.yellowAtRisk },
   { label: 'Assets', icon: 'shield-checkmark', route: '/assets', color: Colors.redUrgent },
+  { label: 'Payments', icon: 'card', route: '/payment-settings', color: Colors.greenReady },
+  { label: 'Guest Booking', icon: 'bed', route: '/guest-book', color: Colors.blueAssigned },
   { label: 'Team', icon: 'people', route: '/team', color: Colors.secondary },
   { label: 'Settings', icon: 'settings', route: '/settings', color: Colors.grayInactive },
 ];
