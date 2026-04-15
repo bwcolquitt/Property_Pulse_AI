@@ -14,7 +14,7 @@ function RootNavigator() {
     if (loading) return;
 
     const firstSegment = segments[0];
-    const isPublicPage = !firstSegment || firstSegment === 'index' || firstSegment === 'login' || firstSegment === 'register';
+    const isPublicPage = !firstSegment || firstSegment === 'index' || firstSegment === 'login' || firstSegment === 'register' || firstSegment === 'guest-book';
 
     if (user && isPublicPage) {
       // Logged in but on landing/login/register - redirect to dashboard
