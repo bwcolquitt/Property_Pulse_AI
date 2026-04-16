@@ -21,6 +21,8 @@ const menuItems = [
   { label: 'Assets', icon: 'shield-checkmark', route: '/assets', color: Colors.redUrgent },
   { label: 'Payments', icon: 'card', route: '/payment-settings', color: Colors.greenReady },
   { label: 'Guest Booking', icon: 'bed', route: '/guest-book', color: Colors.blueAssigned },
+  { label: 'Help Center', icon: 'book', route: '/help-center', color: Colors.purpleAwaiting },
+  { label: 'AI Assistant', icon: 'chatbubble-ellipses', route: '/ai-assistant', color: Colors.accent },
   { label: 'Team', icon: 'people', route: '/team', color: Colors.secondary },
   { label: 'Settings', icon: 'settings', route: '/settings', color: Colors.grayInactive },
 ];

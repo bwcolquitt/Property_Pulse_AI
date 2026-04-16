@@ -62,6 +62,8 @@ function RootNavigator() {
       <Stack.Screen name="supply-requests" options={{ headerShown: true, title: 'Supply Requests' }} />
       <Stack.Screen name="guest-book" options={{ headerShown: false, title: 'Book a Stay' }} />
       <Stack.Screen name="payment-settings" options={{ headerShown: true, title: 'Payment Settings' }} />
+      <Stack.Screen name="help-center" options={{ headerShown: true, title: 'Help Center' }} />
+      <Stack.Screen name="ai-assistant" options={{ headerShown: true, title: 'AI Assistant' }} />
     </Stack>
   );
 }
