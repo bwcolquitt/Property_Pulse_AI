@@ -9,6 +9,7 @@ import api from '../../src/utils/api';
 
 function HeaderLogo() {
   const router = useRouter();
+  const { isDemo } = useAuth();
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ function HeaderLogo() {
           <Text style={{ color: '#DDA239' }}> Pulse</Text>
           <Text style={{ color: '#0A4F7F' }}> AI</Text>
         </Text>
+        {isDemo && <View style={hStyles.demoBadge}><Text style={hStyles.demoText}>DEMO</Text></View>}
       </View>
       <TouchableOpacity testID="notifications-bell" style={hStyles.bellBtn} onPress={() => router.push('/notifications' as any)}>
         <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
@@ -63,6 +65,8 @@ const hStyles = StyleSheet.create({
   bellBtn: { position: 'relative', padding: 4 },
   badge: { position: 'absolute', top: 0, right: 0, backgroundColor: '#EF4444', borderRadius: 9, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
   badgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
+  demoBadge: { backgroundColor: '#DDA239', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 4 },
+  demoText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 1 },
 });
 
 export default function TabLayout() {

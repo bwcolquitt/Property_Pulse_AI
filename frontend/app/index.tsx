@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,12 +7,39 @@ import { Colors, Spacing } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
 import PropertyPulseLogo from '../src/components/PropertyPulseLogo';
 
+const DEMO_ROLES = [
+  { key: 'property_manager', label: 'Host / Manager', icon: 'shield', desc: 'See the full admin dashboard, properties, turnovers, reports, and AI tools', color: Colors.primary },
+  { key: 'cleaner', label: 'Cleaner', icon: 'sparkles', desc: 'Complete checklists, take photos, report issues, and scan QR codes', color: Colors.secondary },
+  { key: 'maintenance', label: 'Maintenance Tech', icon: 'construct', desc: 'View assigned repairs, update status, and bid on jobs', color: Colors.accent },
+  { key: 'vendor', label: 'Vendor', icon: 'briefcase', desc: 'Browse the job board, submit bids, and manage your schedule', color: Colors.purpleAwaiting },
+];
+
 export default function LandingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, loading } = useAuth();
+  const { user, loading, loginDemo } = useAuth();
+  const [demoModal, setDemoModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [leadName, setLeadName] = useState('');
+  const [leadEmail, setLeadEmail] = useState('');
+  const [demoLoading, setDemoLoading] = useState(false);
 
-  // Auth routing handled by _layout.tsx RootNavigator
+  const startDemo = async () => {
+    if (!leadName.trim() || !leadEmail.trim()) {
+      Alert.alert('Required', 'Please enter your name and email to try the demo');
+      return;
+    }
+    if (!selectedRole) return;
+    setDemoLoading(true);
+    try {
+      await loginDemo(leadName.trim(), leadEmail.trim().toLowerCase(), selectedRole);
+      setDemoModal(false);
+    } catch (e: any) {
+      Alert.alert('Error', e.response?.data?.detail || 'Could not start demo');
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -96,6 +123,60 @@ export default function LandingScreen() {
           ))}
         </View>
       </View>
+
+      {/* Interactive Demo Section */}
+      <View style={styles.demoSection}>
+        <View style={styles.demoHeader}>
+          <Ionicons name="play-circle" size={24} color={Colors.accent} />
+          <Text style={styles.demoTitle}>Try the Live Demo</Text>
+        </View>
+        <Text style={styles.demoSubtitle}>See how Property Pulse AI works for your role. 1-hour free access, no credit card needed.</Text>
+        <View style={styles.demoGrid}>
+          {DEMO_ROLES.map(role => (
+            <TouchableOpacity key={role.key} style={styles.demoCard} onPress={() => { setSelectedRole(role.key); setDemoModal(true); }}>
+              <View style={[styles.demoCardIcon, { backgroundColor: role.color + '15' }]}>
+                <Ionicons name={role.icon as any} size={22} color={role.color} />
+              </View>
+              <Text style={styles.demoCardLabel}>{role.label}</Text>
+              <Text style={styles.demoCardDesc}>{role.desc}</Text>
+              <View style={[styles.demoCardBtn, { backgroundColor: role.color }]}>
+                <Ionicons name="play" size={12} color="#fff" />
+                <Text style={styles.demoCardBtnText}>Try Demo</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Demo Lead Capture Modal */}
+      <Modal visible={demoModal} transparent animationType="fade" onRequestClose={() => setDemoModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="play-circle" size={28} color={Colors.accent} />
+              <Text style={styles.modalTitle}>Start Your Demo</Text>
+            </View>
+            <Text style={styles.modalSub}>
+              Enter your info to get 1-hour free access as a{' '}
+              <Text style={{ fontWeight: '700', color: DEMO_ROLES.find(r => r.key === selectedRole)?.color }}>
+                {DEMO_ROLES.find(r => r.key === selectedRole)?.label}
+              </Text>
+            </Text>
+            <TextInput style={styles.modalInput} value={leadName} onChangeText={setLeadName} placeholder="Your name" placeholderTextColor={Colors.grayInactive} autoCapitalize="words" />
+            <TextInput style={styles.modalInput} value={leadEmail} onChangeText={setLeadEmail} placeholder="Your email" placeholderTextColor={Colors.grayInactive} autoCapitalize="none" keyboardType="email-address" />
+            <View style={styles.modalTimeBadge}>
+              <Ionicons name="time" size={14} color={Colors.accent} />
+              <Text style={styles.modalTimeText}>1-hour access · No credit card · Full features</Text>
+            </View>
+            <TouchableOpacity style={styles.modalStartBtn} onPress={startDemo} disabled={demoLoading}>
+              {demoLoading ? <ActivityIndicator color="#fff" /> : <><Ionicons name="rocket" size={18} color="#fff" /><Text style={styles.modalStartText}>Launch Demo</Text></>}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setDemoModal(false)}>
+              <Text style={styles.modalCancelText}>Maybe Later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -126,4 +207,29 @@ const styles = StyleSheet.create({
   trustIcons: { flexDirection: 'row', gap: Spacing.lg },
   trustItem: { alignItems: 'center', gap: 4 },
   trustLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+  // Demo Section
+  demoSection: { marginTop: Spacing.xl, paddingHorizontal: Spacing.md, paddingBottom: 20 },
+  demoHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 4 },
+  demoTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
+  demoSubtitle: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18, marginBottom: Spacing.md },
+  demoGrid: { gap: Spacing.sm },
+  demoCard: { backgroundColor: Colors.surface, borderRadius: 12, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: 6 },
+  demoCardIcon: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  demoCardLabel: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  demoCardDesc: { fontSize: 12, color: Colors.textSecondary, lineHeight: 16 },
+  demoCardBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8, marginTop: 4 },
+  demoCardBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  // Demo Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: Spacing.lg },
+  modal: { backgroundColor: Colors.surface, borderRadius: 18, padding: Spacing.lg, gap: Spacing.sm },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  modalTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  modalSub: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
+  modalInput: { backgroundColor: Colors.surfaceSecondary, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: Colors.border, color: Colors.textPrimary },
+  modalTimeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.accent + '10', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start', borderWidth: 1, borderColor: Colors.accent + '25' },
+  modalTimeText: { fontSize: 12, fontWeight: '600', color: Colors.accent },
+  modalStartBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 12, marginTop: Spacing.sm },
+  modalStartText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  modalCancelBtn: { alignItems: 'center', paddingVertical: 10 },
+  modalCancelText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
 });

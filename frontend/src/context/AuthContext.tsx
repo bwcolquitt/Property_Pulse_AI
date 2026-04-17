@@ -12,16 +12,22 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isDemo: boolean;
+  demoExpiresAt: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (data: any) => Promise<void>;
+  loginDemo: (name: string, email: string, role: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  isDemo: false,
+  demoExpiresAt: null,
   login: async () => {},
   register: async () => {},
+  loginDemo: async () => {},
   logout: async () => {},
 });
 
@@ -30,6 +36,8 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
+  const [demoExpiresAt, setDemoExpiresAt] = useState<string | null>(null);
 
   const checkAuth = useCallback(async () => {
     try {
@@ -68,10 +76,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try { await api.post('/auth/logout'); } catch {}
     await setToken(null);
     setUser(null);
+    setIsDemo(false);
+    setDemoExpiresAt(null);
+  };
+
+  const loginDemo = async (name: string, email: string, role: string) => {
+    const { data } = await api.post('/auth/demo-access', { name, email, role });
+    await setToken(data.token);
+    setUser(data);
+    setIsDemo(true);
+    setDemoExpiresAt(data.demo_expires_at);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, isDemo, demoExpiresAt, login, register, loginDemo, logout }}>
       {children}
     </AuthContext.Provider>
   );
