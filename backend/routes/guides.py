@@ -1,10 +1,73 @@
 from fastapi import APIRouter, Request
-from helpers import get_current_user
+from helpers import get_current_user, serialize_doc
 
 router = APIRouter(prefix="/api/guides", tags=["guides"])
 
 def get_db(request: Request):
     return request.app.state.db
+
+async def get_company_config(db):
+    """Fetch all company config sections for injection into guides."""
+    sections = ["profile", "contacts", "check_in_out", "house_rules",
+                 "emergency_procedures", "communication", "legal", "custom_faqs"]
+    config = {}
+    for s in sections:
+        doc = await db.company_config.find_one({"section": s})
+        if doc:
+            d = serialize_doc(doc)
+            d.pop("section", None)
+            config[s] = d
+        else:
+            config[s] = {}
+    return config
+
+def inject_company_vars(guides: list, config: dict) -> list:
+    """Replace {{variable}} placeholders with company config values and append dynamic sections."""
+    profile = config.get("profile", {})
+    contacts = config.get("contacts", {})
+    check_in = config.get("check_in_out", {})
+    rules = config.get("house_rules", {})
+    comm = config.get("communication", {})
+    legal = config.get("legal", {})
+    
+    company_name = profile.get("company_name", "your property manager")
+    
+    var_map = {
+        "{{company_name}}": company_name,
+        "{{main_phone}}": contacts.get("main_phone", "the main office"),
+        "{{main_email}}": contacts.get("main_email", "the office email"),
+        "{{emergency_phone}}": contacts.get("emergency_phone", "911"),
+        "{{after_hours_phone}}": contacts.get("after_hours_phone", "the after-hours line"),
+        "{{maintenance_hotline}}": contacts.get("maintenance_hotline", "the maintenance line"),
+        "{{office_hours}}": contacts.get("office_hours", "business hours"),
+        "{{check_in_time}}": check_in.get("default_check_in_time", "3:00 PM"),
+        "{{check_out_time}}": check_in.get("default_check_out_time", "11:00 AM"),
+        "{{key_method}}": check_in.get("key_exchange_method", "lockbox"),
+        "{{quiet_hours}}": f"{rules.get('quiet_hours_start', '10 PM')} to {rules.get('quiet_hours_end', '8 AM')}",
+        "{{wifi_network}}": rules.get("wifi_network", "ask your host"),
+        "{{wifi_password}}": rules.get("wifi_password", "ask your host"),
+        "{{preferred_contact}}": comm.get("preferred_contact_method", "text"),
+        "{{response_sla}}": comm.get("response_time_sla", "as soon as possible"),
+        "{{cancellation_policy}}": legal.get("cancellation_policy", "Contact your property manager for details"),
+    }
+    
+    result = []
+    for guide in guides:
+        g = dict(guide)
+        # Replace vars in steps
+        if "steps" in g:
+            g["steps"] = [_replace_vars(s, var_map) for s in g["steps"]]
+        if "tips" in g:
+            g["tips"] = [_replace_vars(t, var_map) for t in g["tips"]]
+        if "summary" in g:
+            g["summary"] = _replace_vars(g["summary"], var_map)
+        result.append(g)
+    return result
+
+def _replace_vars(text: str, var_map: dict) -> str:
+    for key, val in var_map.items():
+        text = text.replace(key, val)
+    return text
 
 ADMIN_GUIDES = [
     {
@@ -284,18 +347,88 @@ GUEST_GUIDES = [
 
 @router.get("")
 async def get_all_guides(request: Request):
-    return {
-        "admin": ADMIN_GUIDES,
-        "provider": PROVIDER_GUIDES,
-        "guest": GUEST_GUIDES,
-    }
-
-@router.get("/{role}")
-async def get_role_guides(role: str, request: Request):
-    if role == "admin":
-        return ADMIN_GUIDES
-    elif role == "provider":
-        return PROVIDER_GUIDES
-    elif role == "guest":
-        return GUEST_GUIDES
-    return []
+    db = get_db(request)
+    config = await get_company_config(db)
+    
+    contacts = config.get("contacts", {})
+    emergency = config.get("emergency_procedures", {})
+    check_in = config.get("check_in_out", {})
+    rules = config.get("house_rules", {})
+    custom_faqs = config.get("custom_faqs", {}).get("faqs", [])
+    company_name = config.get("profile", {}).get("company_name", "")
+    
+    dynamic_guest = list(GUEST_GUIDES)
+    
+    # Replace contact guide with real company data
+    if contacts.get("main_phone") or contacts.get("emergency_phone"):
+        dynamic_guest[2] = {
+            "id": "contact", "title": "Who to Contact", "icon": "call", "color": "#FF5722",
+            "summary": f"Need help? Here's who to reach at {company_name or 'your property manager'}",
+            "steps": [
+                f"For booking questions — call {contacts.get('main_phone', 'the office')} or email {contacts.get('main_email', 'the office')}",
+                f"Office hours: {contacts.get('office_hours', 'Check with your host')}",
+                f"After hours: {contacts.get('after_hours_phone', 'Leave a message')}",
+                f"Maintenance emergencies: {contacts.get('maintenance_hotline', 'Call the main office')}",
+                "For life-threatening emergencies — always call 911 first",
+                "For app questions — use the AI Chat for instant answers",
+            ],
+            "tips": ["Save the emergency number in your phone before your trip!"]
+        }
+    
+    # Add check-in guide
+    if check_in.get("check_in_instructions") or check_in.get("key_exchange_method"):
+        dynamic_guest.insert(1, {
+            "id": "check-in-details", "title": "Check-in Instructions", "icon": "key", "color": "#2196F3",
+            "summary": "Everything you need to get into your rental",
+            "steps": [
+                f"Check-in time: {check_in.get('default_check_in_time', '3:00 PM')}",
+                f"Check-out time: {check_in.get('default_check_out_time', '11:00 AM')}",
+                f"Key access: {check_in.get('key_exchange_method', 'Contact your host')}",
+                check_in.get("lockbox_instructions") or check_in.get("smart_lock_instructions") or check_in.get("check_in_instructions") or "Your host will send instructions before arrival",
+                check_in.get("check_out_instructions") or "Leave the property clean and lock all doors",
+            ],
+            "tips": ["Arrive during daylight if possible"]
+        })
+    
+    # Add house rules guide
+    if rules.get("parking_rules") or rules.get("pool_rules") or rules.get("additional_rules") or rules.get("wifi_network"):
+        rule_steps = [s for s in [
+            f"Quiet hours: {rules.get('quiet_hours_start', '10 PM')} to {rules.get('quiet_hours_end', '8 AM')}",
+            f"Parking: {rules.get('parking_rules')}" if rules.get("parking_rules") else None,
+            f"Pets: {'Allowed' if rules.get('pets_allowed') else 'Not allowed'}" + (f" — {rules.get('pet_rules')}" if rules.get('pet_rules') else ""),
+            "No smoking on property" if not rules.get("smoking_allowed") else f"Smoking: {rules.get('smoking_rules', 'designated areas only')}",
+            f"Pool: {rules.get('pool_hours', '')} {rules.get('pool_rules', '')}" if rules.get("pool_hours") or rules.get("pool_rules") else None,
+            f"Trash: {rules.get('trash_instructions')}" if rules.get("trash_instructions") else None,
+            f"WiFi: {rules.get('wifi_network', '')} / Password: {rules.get('wifi_password', '')}" if rules.get("wifi_network") else None,
+            rules.get("additional_rules") if rules.get("additional_rules") else None,
+        ] if s is not None]
+        dynamic_guest.insert(2, {
+            "id": "house-rules", "title": "House Rules", "icon": "document-text", "color": "#9C27B0",
+            "summary": "Please follow these rules during your stay",
+            "steps": rule_steps, "tips": ["Following the house rules helps keep the property nice for everyone!"]
+        })
+    
+    # Add emergency procedures
+    procedures = emergency.get("procedures", [])
+    if procedures:
+        steps = ["For ANY life-threatening emergency, call 911 first!"]
+        for proc in procedures:
+            steps.append(f"{proc.get('title', proc.get('procedure_type', ''))}: {proc.get('instructions', '')} — Call: {proc.get('contact_phone', '')}")
+        dynamic_guest.append({
+            "id": "emergencies", "title": "Emergency Procedures", "icon": "medkit", "color": "#F44336",
+            "summary": "What to do in an emergency",
+            "steps": steps, "tips": ["Keep calm and follow the steps!"]
+        })
+    
+    admin_guides = inject_company_vars(list(ADMIN_GUIDES), config)
+    provider_guides = inject_company_vars(list(PROVIDER_GUIDES), config)
+    guest_guides = inject_company_vars(dynamic_guest, config)
+    
+    for faq in custom_faqs:
+        faq_guide = {"id": f"faq-{custom_faqs.index(faq)}", "title": faq.get("question", ""), "icon": "help-circle", "color": "#607D8B", "summary": "Custom FAQ", "steps": [faq.get("answer", "")], "tips": []}
+        role = faq.get("role", "all")
+        if role in ("all", "admin"): admin_guides.append(faq_guide)
+        if role in ("all", "provider"): provider_guides.append(faq_guide)
+        if role in ("all", "guest"): guest_guides.append(faq_guide)
+    
+    return {"admin": admin_guides, "provider": provider_guides, "guest": guest_guides, "company": config.get("profile", {})}

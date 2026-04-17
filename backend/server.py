@@ -39,6 +39,7 @@ from routes.payments import router as payments_router
 from routes.guest_booking import router as guest_booking_router
 from routes.ai_chat import router as ai_chat_router
 from routes.guides import router as guides_router
+from routes.company_config import router as company_config_router
 from seed import seed_database
 
 # Configure logging
@@ -96,6 +97,7 @@ app.include_router(payments_router)
 app.include_router(guest_booking_router)
 app.include_router(ai_chat_router)
 app.include_router(guides_router)
+app.include_router(company_config_router)
 
 # Health check
 @app.get("/api/health")

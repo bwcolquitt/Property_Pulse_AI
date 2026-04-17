@@ -64,6 +64,7 @@ function RootNavigator() {
       <Stack.Screen name="payment-settings" options={{ headerShown: true, title: 'Payment Settings' }} />
       <Stack.Screen name="help-center" options={{ headerShown: true, title: 'Help Center' }} />
       <Stack.Screen name="ai-assistant" options={{ headerShown: true, title: 'AI Assistant' }} />
+      <Stack.Screen name="company-config" options={{ headerShown: true, title: 'Company Settings' }} />
     </Stack>
   );
 }

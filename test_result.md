@@ -255,6 +255,21 @@ backend:
         - agent: "testing"
         - comment: "✅ Inventory reorder settings working correctly. GET /api/inventory-v2/items returns 20 inventory items with proper structure. PUT /api/inventory-v2/items/{id}/reorder-settings successfully updates reorder URL and level settings for inventory management."
 
+  - task: "Company Configuration API (White-label SaaS)"
+    implemented: true
+    working: true
+    file: "routes/company_config.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "GET /api/company-config (all sections), PUT endpoints for profile, contacts, check-in-out, house-rules, custom-faqs. Integration with guides system for white-label customization."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Company Configuration API working perfectly. All 9 tests passed (100% success rate). GET /api/company-config returns 8 config sections (profile, contacts, check_in_out, house_rules, emergency_procedures, communication, legal, custom_faqs). PUT endpoints successfully update: company profile (Oceanview Rentals), contact directory, check-in/out policies, house rules, custom FAQs. Data persistence verified - all configuration data correctly stored and retrieved. Guides integration working - company data (contact info, branding) successfully injected into guest guides. Authentication properly required for PUT endpoints. White-label SaaS functionality fully operational."
+
 metadata:
   created_by: "main_agent"
   version: "2.0"
@@ -459,3 +474,5 @@ agent_communication:
     - message: "✅ NEW BACKEND APIS TESTING COMPLETED - 100% SUCCESS RATE. Tested 3 new API groups with 11 total endpoints: 1) Payment Config API (6 endpoints) - Stripe configuration with secret key masking working perfectly, 2) Guest Booking API (2 endpoints) - Public booking system functional, found 4 properties, successfully created guest booking with conflict detection, 3) Inventory Reorder Settings API (2 endpoints) - Enhanced inventory management with reorder URL/level configuration working correctly. All endpoints properly authenticated where required, public endpoints accessible without auth. Authentication using JWT tokens working correctly."
     - agent: "testing"
     - message: "✅ PROPERTY PULSE AI EXPO APP TESTING COMPLETED - Mobile dimensions 390x844 (iPhone 14). Tested all 6 requested features: 1) Landing Page - Property Pulse AI branding ✓, AI-focused features ✓, 'Book a Stay as Guest' button ✓, 2) Guest Booking Page - Property Pulse AI branding ✓, property cards with photos ✓, guest form with date fields ✓, 3) Login - admin@example.com/admin123 credentials working ✓, 4) Payment Settings - stats bar ✓, Stripe Setup tab ✓, key fields ✓, auto-pay toggles ✓, 5) Inventory Reorder - Low Stock tab ✓, reorder buttons visible on low stock items ✓, 6) Dashboard - Property Pulse AI branding ✓. All core functionality working correctly. Authentication session management working as expected. Mobile responsiveness excellent across all tested screens."
+    - agent: "testing"
+    - message: "✅ COMPANY CONFIGURATION API TESTING COMPLETED - 100% SUCCESS RATE (9/9 tests passed). White-label SaaS functionality fully operational. Tested all company config endpoints: GET /api/company-config returns 8 config sections (profile, contacts, check_in_out, house_rules, emergency_procedures, communication, legal, custom_faqs). PUT endpoints working perfectly: company profile (Oceanview Rentals branding), contact directory (phone/email), check-in/out policies (smart lock instructions), house rules (WiFi, parking, pool), custom FAQs (guest-specific). Data persistence verified - all configuration correctly stored/retrieved. Guides integration working - company data successfully injected into guest guides with contact info and branding. Authentication properly required for admin endpoints. PropertyPulse white-label system ready for deployment."

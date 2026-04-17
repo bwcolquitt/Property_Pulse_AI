@@ -93,6 +93,25 @@ async def send_chat_message(input: ChatMessage, request: Request):
     # Get recent history for context
     history = await db.ai_chat_history.find({"session_id": session_id}).sort("created_at", 1).to_list(20)
     
+    # Fetch company config for context injection
+    company_context = ""
+    try:
+        sections = ["profile", "contacts", "check_in_out", "house_rules", "emergency_procedures", "communication", "legal", "custom_faqs"]
+        for s in sections:
+            doc = await db.company_config.find_one({"section": s})
+            if doc:
+                doc.pop("_id", None)
+                doc.pop("section", None)
+                doc.pop("updated_by", None)
+                doc.pop("updated_at", None)
+                if any(v for k, v in doc.items() if v and k not in ("id",)):
+                    company_context += f"\n\n{s.upper().replace('_', ' ')} CONFIG:\n"
+                    for k, v in doc.items():
+                        if v and k not in ("id",):
+                            company_context += f"- {k}: {v}\n"
+    except Exception as e:
+        logger.warning(f"Could not fetch company config for AI: {e}")
+    
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         from dotenv import load_dotenv
@@ -106,10 +125,14 @@ async def send_chat_message(input: ChatMessage, request: Request):
         if input.user_role:
             role_context = f"\n\nThe user's role is: {input.user_role}. Tailor your answers to their role."
         
+        dynamic_context = ""
+        if company_context:
+            dynamic_context = f"\n\n=== THIS COMPANY'S SPECIFIC INFORMATION ===\nUse this real data when answering questions about the company, contacts, policies, rules, and procedures:{company_context}\n=== END COMPANY INFO ==="
+        
         chat = LlmChat(
             api_key=api_key,
             session_id=f"pp-{session_id}",
-            system_message=SYSTEM_PROMPT + role_context
+            system_message=SYSTEM_PROMPT + role_context + dynamic_context
         )
         chat.with_model("openai", "gpt-5.2")
         
