@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, StatusColors } from '../../src/constants/theme';
+import { useAuth } from '../../src/context/AuthContext';
 import api from '../../src/utils/api';
 
 export default function TurnoverDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [turnover, setTurnover] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const isServiceProvider = user?.role === 'cleaner' || user?.role === 'maintenance_technician' || user?.role === 'maintenance';
+  const isDueInFuture = turnover?.due_at ? new Date(turnover.due_at) > new Date() : false;
+  const isLockedForProvider = isServiceProvider && isDueInFuture;
 
   useEffect(() => {
     (async () => {
@@ -36,6 +42,14 @@ export default function TurnoverDetailScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Custom Back Button */}
+      <TouchableOpacity testID="custom-back-btn" style={styles.backBtn} onPress={() => {
+        if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)'); }
+      }}>
+        <Ionicons name="arrow-back" size={20} color={Colors.primary} />
+        <Text style={styles.backText}>Back</Text>
+      </TouchableOpacity>
+
       {/* Status and Title */}
       <View style={styles.header}>
         <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
@@ -85,13 +99,24 @@ export default function TurnoverDetailScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Checklist</Text>
-          {turnover.checklist && (
+          {turnover.checklist && !isLockedForProvider && (
             <TouchableOpacity testID="open-checklist-btn" style={styles.openBtn} onPress={() => router.push(`/checklist/${id}`)}>
               <Text style={styles.openBtnText}>Open Checklist</Text>
               <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
             </TouchableOpacity>
           )}
         </View>
+        {isLockedForProvider && (
+          <View style={styles.lockBanner}>
+            <Ionicons name="lock-closed" size={18} color={Colors.redUrgent} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.lockTitle}>Not available yet</Text>
+              <Text style={styles.lockText}>
+                This turnover is scheduled for {turnover.due_at ? new Date(turnover.due_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'a future date'}. You can start work on or after the due date.
+              </Text>
+            </View>
+          </View>
+        )}
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${turnover.checklist?.completion_percent || 0}%` }]} />
@@ -120,6 +145,7 @@ export default function TurnoverDetailScreen() {
       )}
 
       {/* Actions */}
+      {!isLockedForProvider && (
       <View style={styles.actionsRow}>
         {turnover.status === 'new' && (
           <TouchableOpacity testID="assign-turnover-btn" style={[styles.actionBtn, { backgroundColor: Colors.blueAssigned }]} onPress={() => handleStatusChange('assigned')}>
@@ -146,6 +172,7 @@ export default function TurnoverDetailScreen() {
           </TouchableOpacity>
         )}
       </View>
+      )}
       <View style={{ height: 30 }} />
     </ScrollView>
   );
@@ -155,6 +182,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.md, gap: Spacing.md },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 2 },
+  backText: { fontSize: 16, fontWeight: '600', color: Colors.primary },
   header: { gap: 6 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, alignSelf: 'flex-start' },
   dot: { width: 8, height: 8, borderRadius: 4 },
@@ -182,4 +211,7 @@ const styles = StyleSheet.create({
   actionsRow: { flexDirection: 'row', gap: Spacing.sm },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 10 },
   actionBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  lockBanner: { flexDirection: 'row', gap: Spacing.sm, backgroundColor: Colors.redUrgent + '08', borderRadius: 10, padding: Spacing.md, borderWidth: 1, borderColor: Colors.redUrgent + '25' },
+  lockTitle: { fontSize: 14, fontWeight: '700', color: Colors.redUrgent },
+  lockText: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18, marginTop: 2 },
 });
