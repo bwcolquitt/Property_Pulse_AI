@@ -52,16 +52,16 @@ export default function DashboardScreen() {
       {/* Quick Stats */}
       <View style={styles.statsGrid}>
         {[
-          { label: "Today's Turns", value: stats?.todays_turnovers || 0, color: Colors.primary, icon: 'refresh-circle' },
-          { label: 'At Risk', value: stats?.properties_at_risk || 0, color: Colors.yellowAtRisk, icon: 'warning' },
-          { label: 'Inspections', value: stats?.pending_inspections || 0, color: Colors.purpleAwaiting, icon: 'clipboard' },
-          { label: 'Properties', value: stats?.total_properties || 0, color: Colors.secondary, icon: 'home' },
+          { label: "Today's Turns", value: stats?.todays_turnovers || 0, color: Colors.primary, icon: 'refresh-circle', route: '/(tabs)/turnovers' },
+          { label: 'At Risk', value: stats?.properties_at_risk || 0, color: Colors.yellowAtRisk, icon: 'warning', route: '/(tabs)/maintenance' },
+          { label: 'Inspections', value: stats?.pending_inspections || 0, color: Colors.purpleAwaiting, icon: 'clipboard', route: '/inspections' },
+          { label: 'Properties', value: stats?.total_properties || 0, color: Colors.secondary, icon: 'home', route: '/property/list' },
         ].map((s, i) => (
-          <View key={i} style={styles.statCard}>
+          <TouchableOpacity key={i} style={styles.statCard} onPress={() => router.push(s.route as any)}>
             <Ionicons name={s.icon as any} size={22} color={s.color} />
             <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
             <Text style={styles.statLabel}>{s.label}</Text>
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
 

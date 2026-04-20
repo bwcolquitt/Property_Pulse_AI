@@ -46,7 +46,7 @@ export default function InspectionsScreen() {
         renderItem={({ item: insp }) => {
           const color = StatusColors[insp.status] || Colors.grayInactive;
           return (
-            <TouchableOpacity testID={`inspection-${insp.id}`} style={styles.card}>
+            <TouchableOpacity testID={`inspection-${insp.id}`} style={styles.card} onPress={() => router.push(`/turnover/${insp.turnover_id || insp.id}`)}>
               <View style={styles.cardTop}>
                 <View style={[styles.badge, { backgroundColor: color + '15' }]}>
                   <View style={[styles.dot, { backgroundColor: color }]} />
