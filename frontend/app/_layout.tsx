@@ -65,6 +65,10 @@ function RootNavigator() {
       <Stack.Screen name="help-center" options={{ headerShown: true, title: 'Help Center' }} />
       <Stack.Screen name="ai-assistant" options={{ headerShown: true, title: 'AI Assistant' }} />
       <Stack.Screen name="company-config" options={{ headerShown: true, title: 'Company Settings' }} />
+      <Stack.Screen name="onsite-purchases" options={{ headerShown: true, title: 'On-Site Purchases' }} />
+      <Stack.Screen name="improvements" options={{ headerShown: true, title: 'Improvements' }} />
+      <Stack.Screen name="property-notes" options={{ headerShown: true, title: 'Service Notes' }} />
+      <Stack.Screen name="inspection-prep" options={{ headerShown: true, title: 'Inspection Prep' }} />
     </Stack>
   );
 }

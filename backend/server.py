@@ -40,6 +40,13 @@ from routes.guest_booking import router as guest_booking_router
 from routes.ai_chat import router as ai_chat_router
 from routes.guides import router as guides_router
 from routes.company_config import router as company_config_router
+from routes.maintenance_hub import router as maintenance_hub_router
+from routes.property_notes import router as property_notes_router
+from routes.guest_inventory import router as guest_inventory_router
+from routes.onsite_purchases import router as onsite_purchases_router
+from routes.improvements import router as improvements_router
+from routes.crew_alerts import router as crew_alerts_router
+from routes.inspection_prep import router as inspection_prep_router
 from seed import seed_database
 
 # Configure logging
@@ -98,6 +105,13 @@ app.include_router(guest_booking_router)
 app.include_router(ai_chat_router)
 app.include_router(guides_router)
 app.include_router(company_config_router)
+app.include_router(maintenance_hub_router)
+app.include_router(property_notes_router)
+app.include_router(guest_inventory_router)
+app.include_router(onsite_purchases_router)
+app.include_router(improvements_router)
+app.include_router(crew_alerts_router)
+app.include_router(inspection_prep_router)
 
 # Health check
 @app.get("/api/health")

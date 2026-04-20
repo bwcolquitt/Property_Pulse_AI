@@ -270,6 +270,111 @@ backend:
         - agent: "testing"
         - comment: "✅ Company Configuration API working perfectly. All 9 tests passed (100% success rate). GET /api/company-config returns 8 config sections (profile, contacts, check_in_out, house_rules, emergency_procedures, communication, legal, custom_faqs). PUT endpoints successfully update: company profile (Oceanview Rentals), contact directory, check-in/out policies, house rules, custom FAQs. Data persistence verified - all configuration data correctly stored and retrieved. Guides integration working - company data (contact info, branding) successfully injected into guest guides. Authentication properly required for PUT endpoints. White-label SaaS functionality fully operational."
 
+  - task: "Maintenance Hub API (Outstanding Issues & Stats)"
+    implemented: true
+    working: true
+    file: "routes/maintenance_hub.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "GET /api/maintenance-hub/outstanding (with priority/property filters), GET /api/maintenance-hub/stats (counts by status/priority), GET /api/maintenance-hub/{issue_id} (issue details with property enrichment)"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Maintenance Hub API working perfectly. GET /api/maintenance-hub/outstanding returns 12 outstanding issues with proper filtering and property enrichment. GET /api/maintenance-hub/stats returns comprehensive statistics: total_open=12, urgent=2, high=6, blocked=0, not_started=5, in_progress=1. All endpoints properly authenticated and returning expected data structures."
+
+  - task: "Property Notes API (Service Information)"
+    implemented: true
+    working: true
+    file: "routes/property_notes.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "PUT /api/property-notes/{property_id} (upsert service notes), GET /api/property-notes/{property_id} (retrieve notes). Stores garage codes, WiFi credentials, door codes, special instructions, etc."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Property Notes API working correctly. PUT /api/property-notes/test123 successfully stores service notes including garage_code=#1234, wifi_network=TestNet, wifi_password=pass123, front_door_code=5678, special_instructions. GET /api/property-notes/test123 correctly retrieves stored data with proper data persistence. Authentication required and working properly."
+
+  - task: "Guest Inventory API (Public & Admin)"
+    implemented: true
+    working: true
+    file: "routes/guest_inventory.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "POST /api/guest-inventory (admin creates items), GET /api/guest-inventory/{property_id} (public endpoint, no auth), DELETE /api/guest-inventory/{item_id} (soft delete). Tracks replacement costs for guest-damaged items."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Guest Inventory API working perfectly. POST /api/guest-inventory successfully creates items (Beach Towels, $25, quantity 6) with proper authentication. GET /api/guest-inventory/{property_id} works as public endpoint (no auth required) returning 1 item with total_value=$150, property_name enrichment. Replacement cost tracking functional for guest damage billing."
+
+  - task: "On-Site Purchases API (25% Markup)"
+    implemented: true
+    working: true
+    file: "routes/onsite_purchases.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "POST /api/onsite-purchases (create purchase with 25% markup), GET /api/onsite-purchases (list with filters), PUT /api/onsite-purchases/{id} (approve/reject). Automatic service fee calculation."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ On-Site Purchases API working correctly. POST /api/onsite-purchases successfully creates purchase (Propane Tank, $29.99) with accurate 25% markup calculation: subtotal=$29.99, service_fee=$7.50, total=$37.49. GET /api/onsite-purchases returns 1 purchase with proper data structure. Markup calculation verified and working as specified."
+
+  - task: "Improvements API (Property Enhancement Tracking)"
+    implemented: true
+    working: true
+    file: "routes/improvements.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "POST /api/improvements (create suggestions), GET /api/improvements (list with filters), PUT /api/improvements/{id} (approve/dismiss/complete). Tracks property enhancement suggestions with priority levels."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Improvements API working correctly. POST /api/improvements successfully creates improvement suggestion (TV wire needs wire track, priority=nice_to_have, status=suggested) with proper user tracking. GET /api/improvements returns 1 improvement with property enrichment. Priority levels and status workflow functioning as designed."
+
+  - task: "Crew Alerts API (Guest Present Notifications)"
+    implemented: true
+    working: true
+    file: "routes/crew_alerts.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "POST /api/crew-alerts/guest-present (report guests still in property), GET /api/crew-alerts (list active alerts), PUT /api/crew-alerts/{id}/resolve. Creates urgent issues and notifications when guests haven't checked out."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Crew Alerts API working perfectly. POST /api/crew-alerts/guest-present successfully creates alert with message 'Alert sent! Admin notified about guest at The Oceanview' and generates urgent issue + notification. GET /api/crew-alerts returns 1 active alert. Guest present workflow functioning correctly for turnover blocking scenarios."
+
+  - task: "Inspection Prep API (Compliance Checklist)"
+    implemented: true
+    working: true
+    file: "routes/inspection_prep.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "GET /api/inspection-prep/checklist/{property_id} (default items or saved), PUT /api/inspection-prep/checklist/{property_id} (update progress), POST /api/inspection-prep/ai-recommendations/{property_id} (AI analysis). 22 default inspection items covering fire safety, electrical, structural, pool/spa, permits."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Inspection Prep API working correctly. GET /api/inspection-prep/checklist/{property_id} returns 22 checklist items including 7 fire safety items with proper categorization and code references. POST /api/inspection-prep/ai-recommendations/{property_id} generates 6 recommendations with 0% compliance score (all items unchecked initially). Default inspection items comprehensive and properly structured."
+
 metadata:
   created_by: "main_agent"
   version: "2.0"
@@ -476,3 +581,5 @@ agent_communication:
     - message: "✅ PROPERTY PULSE AI EXPO APP TESTING COMPLETED - Mobile dimensions 390x844 (iPhone 14). Tested all 6 requested features: 1) Landing Page - Property Pulse AI branding ✓, AI-focused features ✓, 'Book a Stay as Guest' button ✓, 2) Guest Booking Page - Property Pulse AI branding ✓, property cards with photos ✓, guest form with date fields ✓, 3) Login - admin@example.com/admin123 credentials working ✓, 4) Payment Settings - stats bar ✓, Stripe Setup tab ✓, key fields ✓, auto-pay toggles ✓, 5) Inventory Reorder - Low Stock tab ✓, reorder buttons visible on low stock items ✓, 6) Dashboard - Property Pulse AI branding ✓. All core functionality working correctly. Authentication session management working as expected. Mobile responsiveness excellent across all tested screens."
     - agent: "testing"
     - message: "✅ COMPANY CONFIGURATION API TESTING COMPLETED - 100% SUCCESS RATE (9/9 tests passed). White-label SaaS functionality fully operational. Tested all company config endpoints: GET /api/company-config returns 8 config sections (profile, contacts, check_in_out, house_rules, emergency_procedures, communication, legal, custom_faqs). PUT endpoints working perfectly: company profile (Oceanview Rentals branding), contact directory (phone/email), check-in/out policies (smart lock instructions), house rules (WiFi, parking, pool), custom FAQs (guest-specific). Data persistence verified - all configuration correctly stored/retrieved. Guides integration working - company data successfully injected into guest guides with contact info and branding. Authentication properly required for admin endpoints. PropertyPulse white-label system ready for deployment."
+    - agent: "testing"
+    - message: "✅ NEW PROPERTYPULSE BACKEND APIS TESTING COMPLETED - 100% SUCCESS RATE (16/16 tests passed). Tested 7 new API groups with comprehensive functionality: 1) Maintenance Hub API - Outstanding issues (12 found) and stats (total_open=12, urgent=2, high=6) working perfectly, 2) Property Notes API - Service information storage/retrieval with garage codes, WiFi credentials, door codes working correctly, 3) Guest Inventory API - Public endpoint (no auth) and admin creation with replacement cost tracking ($150 total value), 4) On-Site Purchases API - 25% markup calculation verified (Propane Tank $29.99 → $37.49 total), 5) Improvements API - Property enhancement suggestions with priority levels working, 6) Crew Alerts API - Guest present notifications creating urgent issues and alerts, 7) Inspection Prep API - 22 default checklist items with AI recommendations (0% initial compliance). All endpoints properly authenticated where required, public endpoints accessible without auth. Authentication using JWT tokens working correctly. Real property data integration successful."

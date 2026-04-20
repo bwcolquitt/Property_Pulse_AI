@@ -284,7 +284,22 @@ export default function ChecklistScreen() {
         </View>
       </View>
 
-      {/* Submit Button */}
+      {/* Guest Still Present Alert + Submit Button */}
+      <TouchableOpacity style={styles.guestAlertBtn} onPress={() => {
+        Alert.alert('Guest Still Present?', 'This will alert the property admin immediately and create an urgent issue.', [
+          { text: 'Cancel' },
+          { text: 'Report', style: 'destructive', onPress: async () => {
+            try {
+              const { data } = await api.post('/crew-alerts/guest-present', { property_id: id, turnover_id: id });
+              Alert.alert('Alert Sent', data.message);
+            } catch { Alert.alert('Error', 'Failed to send alert'); }
+          }},
+        ]);
+      }}>
+        <Ionicons name="alert-circle" size={16} color={Colors.redUrgent} />
+        <Text style={styles.guestAlertText}>Guest Still Here?</Text>
+      </TouchableOpacity>
+
       {allDone && (
         <TouchableOpacity testID="submit-checklist-btn" style={styles.submitBtn} onPress={() => {
           Alert.alert('Checklist Complete!', 'All tasks done. Mark turnover as ready for inspection?', [
@@ -565,6 +580,8 @@ const styles = StyleSheet.create({
   // Submit
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.greenReady, marginHorizontal: Spacing.md, marginTop: Spacing.sm, paddingVertical: 14, borderRadius: 10 },
   submitBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  guestAlertBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginHorizontal: Spacing.md, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.redUrgent + '10', borderWidth: 1, borderColor: Colors.redUrgent + '30' },
+  guestAlertText: { fontSize: 13, fontWeight: '700', color: Colors.redUrgent },
   // List
   list: { paddingBottom: 40 },
   // Floor Header
