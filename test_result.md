@@ -568,6 +568,96 @@ frontend:
         - agent: "testing"
         - comment: "✅ Provider Calendar screen loads successfully with proper header and calendar interface structure."
 
+  - task: "Maintenance Tab Screen"
+    implemented: true
+    working: true
+    file: "app/(tabs)/maintenance.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Maintenance tab with stats bar, filter chips, outstanding issues list, modal details"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Maintenance Tab fully functional. Stats bar showing 3 Urgent, 6 High, 6 Not Started, 1 In Progress, 0 Blocked. Filter chips working (All Open, Urgent, High, Not Started, In Progress, Blocked). Outstanding issues list displaying maintenance items with priority colors, status badges, property names, and issue details. Mobile responsive design working perfectly."
+
+  - task: "On-Site Purchases Screen"
+    implemented: true
+    working: true
+    file: "app/onsite-purchases.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "On-site purchases screen with 25% markup calculation, receipt photos, approval workflow, FAB"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ On-Site Purchases screen fully functional. Header 'On-Site Purchases' with subtitle about 25% service fee auto-calculated. Shows existing purchase (Propane Tank) with proper markup calculation: Subtotal $29.99, Service Fee (25%) $7.50, Total $37.49. FAB button visible for adding new purchases. Approval/Reject buttons working for pending items."
+
+  - task: "Improvements Screen"
+    implemented: true
+    working: true
+    file: "app/improvements.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Improvements screen with property enhancement suggestions, priority levels, photo attachments, approval workflow"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Improvements screen fully functional. Header 'Improvement Opportunities' with lightbulb icon. Shows existing improvement suggestion (TV wire needs wire track) with priority level (Nice To Have) and status (Suggested). Gold FAB button visible for adding new improvements. Approve/Dismiss buttons working for suggested items. Mobile responsive design excellent."
+
+  - task: "Inspection Prep Screen"
+    implemented: true
+    working: true
+    file: "app/inspection-prep.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Inspection prep screen with AI-powered compliance checklist, property selector, categorized items, progress tracking"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Inspection Prep screen fully functional. Title 'City Inspection Prep' with subtitle about AI-powered compliance checklist. Property selector working with multiple properties. 'AI Inspection Analysis' button visible and functional. Categorized checklist items showing Fire Safety (0/7) and Electrical (0/3) categories with detailed inspection items including code references and check intervals. Save Progress button working."
+
+  - task: "Service Crew Notes Screen"
+    implemented: true
+    working: true
+    file: "app/property-notes.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Service crew notes screen with property-specific codes, WiFi credentials, special instructions, crew-only visibility"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Service Crew Notes screen fully functional. Title 'Service Crew Notes' with subtitle about codes, WiFi, and key property info. Property selector working. 'Only visible to service crew — not guests' badge prominently displayed. All required fields present and functional: Garage Door Code (#1234), Front Door Code (5678), Lockbox Code (9876), Gate Code (#4321), Owner Storage Code (1111), Alarm Code (0000), WiFi Network (PropertyGuest), WiFi Password (beach2025), and additional utility location fields. Save Notes button working."
+
+  - task: "More Tab Enhanced Menu"
+    implemented: true
+    working: true
+    file: "app/(tabs)/more.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Enhanced More tab with all new menu items including On-Site Purchases, Improvements, Inspection Prep, Service Notes"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ More Tab enhanced menu fully functional. All new menu items visible and working: On-Site Purchases (receipt icon), Improvements (bulb icon), Inspection Prep (clipboard icon), Service Notes (document-lock icon). Profile card showing user info (Alex Rivera, admin@example.com, Property Manager role). Comprehensive menu with 24+ items including Properties, Inspections, Inventory, Calendar, Reservations, Messages, Reports, AI Command, etc. Logout functionality working. Mobile responsive design excellent."
+
 agent_communication:
     - agent: "main"
     - message: "All backend APIs tested and passing. Drag-and-drop gesture reordering implemented using react-native-draggable-flatlist in checklist/[id].tsx. GestureHandlerRootView added to _layout.tsx. All new screens linked in navigation. Please test the following frontend flows: 1) Login (admin@example.com/admin123) 2) Dashboard loads 3) More tab shows all 15 menu items 4) Navigate to Inventory page 5) Navigate to Reports page 6) Navigate to Job Board 7) Navigate to Reservations 8) Navigate to Assets 9) Navigate to Supply Requests. Use mobile dimensions 390x844."
@@ -583,3 +673,5 @@ agent_communication:
     - message: "✅ COMPANY CONFIGURATION API TESTING COMPLETED - 100% SUCCESS RATE (9/9 tests passed). White-label SaaS functionality fully operational. Tested all company config endpoints: GET /api/company-config returns 8 config sections (profile, contacts, check_in_out, house_rules, emergency_procedures, communication, legal, custom_faqs). PUT endpoints working perfectly: company profile (Oceanview Rentals branding), contact directory (phone/email), check-in/out policies (smart lock instructions), house rules (WiFi, parking, pool), custom FAQs (guest-specific). Data persistence verified - all configuration correctly stored/retrieved. Guides integration working - company data successfully injected into guest guides with contact info and branding. Authentication properly required for admin endpoints. PropertyPulse white-label system ready for deployment."
     - agent: "testing"
     - message: "✅ NEW PROPERTYPULSE BACKEND APIS TESTING COMPLETED - 100% SUCCESS RATE (16/16 tests passed). Tested 7 new API groups with comprehensive functionality: 1) Maintenance Hub API - Outstanding issues (12 found) and stats (total_open=12, urgent=2, high=6) working perfectly, 2) Property Notes API - Service information storage/retrieval with garage codes, WiFi credentials, door codes working correctly, 3) Guest Inventory API - Public endpoint (no auth) and admin creation with replacement cost tracking ($150 total value), 4) On-Site Purchases API - 25% markup calculation verified (Propane Tank $29.99 → $37.49 total), 5) Improvements API - Property enhancement suggestions with priority levels working, 6) Crew Alerts API - Guest present notifications creating urgent issues and alerts, 7) Inspection Prep API - 22 default checklist items with AI recommendations (0% initial compliance). All endpoints properly authenticated where required, public endpoints accessible without auth. Authentication using JWT tokens working correctly. Real property data integration successful."
+    - agent: "testing"
+    - message: "✅ NEW PROPERTYPULSE FRONTEND SCREENS TESTING COMPLETED - 100% SUCCESS RATE (6/6 screens working). Mobile dimensions 390x844. Tested all 6 NEW screens after login with admin@example.com/admin123: 1) Maintenance Tab (/maintenance) - Stats bar showing 3 Urgent, 6 High, 6 Not Started, 1 In Progress, 0 Blocked ✓, filter chips ✓, maintenance issues list ✓, 2) On-Site Purchases (/onsite-purchases) - Header with 25% service fee subtitle ✓, FAB button ✓, existing purchase with proper markup calculation ✓, 3) Improvements (/improvements) - Header with lightbulb icon ✓, gold FAB ✓, improvement suggestions ✓, 4) Inspection Prep (/inspection-prep) - City Inspection Prep title ✓, property selector ✓, AI Inspection Analysis button ✓, categorized checklist (Fire Safety 0/7, Electrical 0/3) ✓, 5) Service Crew Notes (/property-notes) - Title ✓, property selector ✓, 'Only visible to service crew' badge ✓, all fields (garage code, WiFi, etc.) ✓, 6) More Tab (/(tabs)/more) - All new menu items visible (On-Site Purchases, Improvements, Inspection Prep, Service Notes) ✓. Authentication working perfectly. All screens mobile-responsive and fully functional."
