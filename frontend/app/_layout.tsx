@@ -87,6 +87,7 @@ function RootNavigator() {
       <Stack.Screen name="owners-inventory" options={{ headerShown: true, title: 'Owner Storage' }} />
       <Stack.Screen name="sms-config" options={{ headerShown: true, title: 'SMS Delivery' }} />
       <Stack.Screen name="pms-connect" options={{ headerShown: true, title: 'PMS Integrations' }} />
+      <Stack.Screen name="send-guest-link" options={{ headerShown: true, title: 'Send Guest Access' }} />
     </Stack>
   );
 }

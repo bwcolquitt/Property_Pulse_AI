@@ -7,6 +7,7 @@ import { useAuth } from '../../src/context/AuthContext';
 
 const menuItems = [
   { label: 'Host Inbox', icon: 'mail', route: '/host-inbox', color: Colors.redUrgent },
+  { label: 'Send Guest Access', icon: 'link', route: '/send-guest-link', color: Colors.primary },
   { label: 'Properties', icon: 'home', route: '/property/list', color: Colors.primary },
   { label: 'Inspections', icon: 'clipboard', route: '/inspections', color: Colors.purpleAwaiting },
   { label: 'Inventory', icon: 'cube', route: '/inventory', color: Colors.accent },
