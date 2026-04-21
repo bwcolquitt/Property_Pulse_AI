@@ -18,12 +18,14 @@ export default function SendGuestLinkScreen() {
   const [email, setEmail] = useState('');
   const [loadingLink, setLoadingLink] = useState(false);
   const [smsEnabled, setSmsEnabled] = useState(false);
+  const [emailEnabled, setEmailEnabled] = useState(false);
 
   const load = async () => {
     try {
-      const [rRes, sRes] = await Promise.all([
+      const [rRes, sRes, eRes] = await Promise.all([
         api.get('/reservations'),
         api.get('/sms/config').catch(() => ({ data: { enabled: false } })),
+        api.get('/email/config').catch(() => ({ data: { enabled: false } })),
       ]);
       const now = new Date();
       const upcoming = (rRes.data || []).filter((r: any) => {
@@ -32,6 +34,7 @@ export default function SendGuestLinkScreen() {
       });
       setReservations(upcoming);
       setSmsEnabled(!!sRes.data?.enabled);
+      setEmailEnabled(!!eRes.data?.enabled);
     } catch (e) { console.error(e); }
     finally { setLoading(false); setRefreshing(false); }
   };
@@ -61,11 +64,23 @@ export default function SendGuestLinkScreen() {
     try { await Clipboard.setStringAsync(linkUrl); Alert.alert('Copied', 'Link copied to clipboard. Paste into your PMS message to guest.'); } catch {}
   };
 
-  const openEmail = () => {
-    const subject = encodeURIComponent(`Welcome to ${selected?.property_name || 'your stay'}!`);
-    const body = encodeURIComponent(`Hi ${selected?.guest_name?.split(' ')[0] || 'there'},\n\nYou can access your guest portal (WiFi, checkout, house guide, AI concierge) here:\n\n${linkUrl}\n\nThis link is valid for 30 days. No password needed.\n\nSee you soon!`);
+  const openEmail = async () => {
+    const subject = `Welcome to ${selected?.property_name || 'your stay'}!`;
+    const body = `Hi ${selected?.guest_name?.split(' ')[0] || 'there'},\n\nYou can access your guest portal (WiFi, checkout, house guide, AI concierge) here:\n\n${linkUrl}\n\nThis link is valid for 30 days. No password needed.\n\nSee you soon!`;
     const to = email || '';
-    const url = `mailto:${to}?subject=${subject}&body=${body}`;
+
+    // If email provider configured, send via backend
+    if (emailEnabled && to) {
+      try {
+        const { data } = await api.post('/email/send', { to, subject, body, purpose: 'check_in_link', reservation_id: selected?.id });
+        Alert.alert(data.simulated ? 'Simulated' : data.success ? 'Email Sent' : 'Failed', data.message || 'Processed');
+        return;
+      } catch (e: any) {
+        Alert.alert('Send Failed', e.response?.data?.detail || 'Try mailto: fallback?');
+      }
+    }
+    // Fallback to mailto:
+    const url = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     Linking.openURL(url).catch(() => Alert.alert('Email', 'Could not open email app. Copy the link instead.'));
   };
 
@@ -145,8 +160,8 @@ export default function SendGuestLinkScreen() {
             <TouchableOpacity style={[styles.shareBtn, { backgroundColor: Colors.accent }]} onPress={openEmail}>
               <Ionicons name="mail" size={18} color="#fff" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.shareTitle}>Open in Email</Text>
-                <Text style={styles.shareSub}>Launches your mail app with pre-filled message{email ? ` to ${email}` : ''}</Text>
+                <Text style={styles.shareTitle}>{emailEnabled ? 'Send Email' : 'Open in Email'}</Text>
+                <Text style={styles.shareSub}>{emailEnabled ? `Auto-send via configured provider${email ? ` to ${email}` : ''}` : `Launches your mail app${email ? ` to ${email}` : ''}`}</Text>
               </View>
             </TouchableOpacity>
 

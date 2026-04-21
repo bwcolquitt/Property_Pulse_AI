@@ -52,6 +52,10 @@ from routes.guest_messages import router as guest_messages_router
 from routes.owners_inventory import router as owners_inventory_router
 from routes.sms import router as sms_router
 from routes.pms_integrations import router as pms_router
+from routes.ical_import import router as ical_router
+from routes.email_delivery import router as email_router
+from routes.hcp_integration import router as hcp_router
+from routes.scorecards import router as scorecards_router
 from seed import seed_database
 
 # Configure logging
@@ -122,6 +126,10 @@ app.include_router(guest_messages_router)
 app.include_router(owners_inventory_router)
 app.include_router(sms_router)
 app.include_router(pms_router)
+app.include_router(ical_router)
+app.include_router(email_router)
+app.include_router(hcp_router)
+app.include_router(scorecards_router)
 
 # Health check
 @app.get("/api/health")

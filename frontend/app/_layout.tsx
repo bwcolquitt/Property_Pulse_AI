@@ -88,6 +88,10 @@ function RootNavigator() {
       <Stack.Screen name="sms-config" options={{ headerShown: true, title: 'SMS Delivery' }} />
       <Stack.Screen name="pms-connect" options={{ headerShown: true, title: 'PMS Integrations' }} />
       <Stack.Screen name="send-guest-link" options={{ headerShown: true, title: 'Send Guest Access' }} />
+      <Stack.Screen name="ical-feeds" options={{ headerShown: true, title: 'iCal Feeds' }} />
+      <Stack.Screen name="email-config" options={{ headerShown: true, title: 'Email Delivery' }} />
+      <Stack.Screen name="cleaner-scorecards" options={{ headerShown: true, title: 'Cleaner Scorecards' }} />
+      <Stack.Screen name="hcp-config" options={{ headerShown: true, title: 'Housecall Pro' }} />
     </Stack>
   );
 }
