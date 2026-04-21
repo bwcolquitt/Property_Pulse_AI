@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../src/constants/theme';
+import { useBadges } from '../../src/hooks/useBadges';
 import { useAuth } from '../../src/context/AuthContext';
 
 const menuItems = [
@@ -45,6 +46,7 @@ const menuItems = [
 export default function MoreScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { badges } = useBadges(60000);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -66,20 +68,33 @@ export default function MoreScreen() {
 
       {/* Menu Items */}
       <View style={styles.menuSection}>
-        {menuItems.map((item, i) => (
-          <TouchableOpacity
-            key={i}
-            testID={`menu-${item.label.toLowerCase()}`}
-            style={styles.menuItem}
-            onPress={() => router.push(item.route as any)}
-          >
-            <View style={[styles.menuIcon, { backgroundColor: item.color + '15' }]}>
-              <Ionicons name={item.icon as any} size={22} color={item.color} />
-            </View>
-            <Text style={styles.menuLabel}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.grayInactive} />
-          </TouchableOpacity>
-        ))}
+        {menuItems.map((item, i) => {
+          let badge: number | null = null;
+          if (badges) {
+            if (item.route === '/host-inbox') badge = badges.host_inbox_new;
+            else if (item.route === '/setup-wizard') badge = badges.setup_incomplete;
+            else if (item.route === '/maintenance') badge = badges.outstanding_issues;
+          }
+          return (
+            <TouchableOpacity
+              key={i}
+              testID={`menu-${item.label.toLowerCase()}`}
+              style={styles.menuItem}
+              onPress={() => router.push(item.route as any)}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: item.color + '15' }]}>
+                <Ionicons name={item.icon as any} size={22} color={item.color} />
+              </View>
+              <Text style={styles.menuLabel}>{item.label}</Text>
+              {badge && badge > 0 ? (
+                <View style={[styles.badge, { backgroundColor: item.route === '/host-inbox' ? Colors.redUrgent : item.color }]}>
+                  <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+                </View>
+              ) : null}
+              <Ionicons name="chevron-forward" size={20} color={Colors.grayInactive} />
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Logout */}
@@ -110,6 +125,8 @@ const styles = StyleSheet.create({
   profileName: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   profileEmail: { fontSize: 13, color: Colors.textSecondary },
   roleBadge: { backgroundColor: Colors.primary + '12', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', marginTop: 4 },
+  badge: { minWidth: 22, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
   roleText: { fontSize: 11, fontWeight: '700', color: Colors.primary, textTransform: 'capitalize' },
   menuSection: { backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },

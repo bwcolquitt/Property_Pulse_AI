@@ -375,6 +375,36 @@ backend:
         - agent: "testing"
         - comment: "✅ Inspection Prep API working correctly. GET /api/inspection-prep/checklist/{property_id} returns 22 checklist items including 7 fire safety items with proper categorization and code references. POST /api/inspection-prep/ai-recommendations/{property_id} generates 6 recommendations with 0% compliance score (all items unchecked initially). Default inspection items comprehensive and properly structured."
 
+  - task: "Guest Phone OTP Verification API"
+    implemented: true
+    working: true
+    file: "routes/guest_otp.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "POST /api/guest-otp/send (generates 6-digit code, SMS via configured provider; returns code in response when simulated), POST /api/guest-otp/verify (checks code, marks phone_verified), GET /api/guest-otp/status. Rate-limited to 3 codes per 10 min, 5 attempts per code, 10-min expiry."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ All 5 Guest OTP checks passed. POST /api/guest-otp/send {phone:'+15551234567'} returns {success:true, simulated:true, code:'<6 digits>', message:'SMS provider not configured...'} as expected when SMS provider is disabled. POST /api/guest-otp/verify with the correct code returns {success:true, message:'Phone verified!'} and flips the user's phone_verified flag. POST /api/guest-otp/verify with a wrong code correctly returns HTTP 400 {detail:'Invalid code.'}. GET /api/guest-otp/status returns {phone_verified:true, phone:'+15551234567'} after verification. Rate limit works: 4 consecutive sends to the same phone return [200,200,200,429] with 4th body {detail:'Too many codes requested. Wait 10 minutes.'}. Test script: /app/backend_test_otp_badges.py."
+
+  - task: "Dashboard Badges API (Unread counts)"
+    implemented: true
+    working: true
+    file: "routes/badges.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "GET /api/badges returns {host_inbox_new, outstanding_issues, urgent_issues, pending_turnovers, unread_notifications, low_inventory, setup_incomplete} in one round trip. Used by useBadges hook for More tab chip indicators."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ All Badges checks passed. GET /api/badges returns all 7 required keys (host_inbox_new, outstanding_issues, urgent_issues, pending_turnovers, unread_notifications, low_inventory, setup_incomplete); all values are int >= 0 (sample: host_inbox_new=1, outstanding_issues=11, urgent_issues=5, pending_turnovers=4, unread_notifications=8, low_inventory=0, setup_incomplete=3). Creating a guest message via POST /api/guest-messages increments host_inbox_new (1→2). Creating an issue with priority='urgent' via POST /api/issues increments BOTH urgent_issues (5→6) and outstanding_issues (11→12). Note: POST /api/issues returned HTTP 500 due to a pre-existing serialization bug in routes/maintenance.py (endpoint returns the raw Mongo doc which still contains the ObjectId `_id` field → FastAPI JSON encoder fails). The insert itself succeeds (which is why the badges counters still incremented correctly), so this does NOT affect the badges API under test — it is a separate pre-existing maintenance.py bug and is unrelated to this review request."
+
   - task: "Setup Wizard API"
     implemented: true
     working: true
@@ -562,10 +592,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Setup Wizard API"
-    - "Push Notifications API (Expo Push)"
-    - "Scheduled iCal Sync (background task)"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -1018,3 +1045,6 @@ agent_communication:
     - message: "✅ LATEST BATCH FRONTEND SMOKE-TEST — ALL PASS (mobile 390x844, admin@example.com/admin123). (1) More tab: 'Email Delivery' (envelope/gold), 'iCal Feeds' (calendar/blue), 'Cleaner Scorecards' (trophy/gold), 'Housecall Pro' (hammer/gold) all render. (2) /ical-feeds → title 'iCal Feeds' + subtitle mentions Airbnb/Vrbo/Booking.com/PMS; blue tip card 'Where to find iCal URL: Airbnb → Listing → Availability → Sync Calendars. Vrbo → Calendar → Import/Export. Most PMS: Calendar Settings → iCal Export.' rendered; empty state 'No iCal feeds configured' + blue FAB (+) visible. (3) /email-config → all 4 provider cards rendered in order: SMTP, SendGrid, Resend (recommended), Disabled (currently selected with checkmark); Save Config + Test Email section (Send Test To input + Send Test Email button) + Recent activity log all visible. (4) /cleaner-scorecards → 'Cleaner Scorecards' title + subtitle 'Performance metrics: completion rate, photo coverage, quality, issues reported'; Last 7d / Last 30d (active) / Last 90d tabs all visible; 3 cleaner cards (Maria Santos #1, Carlos Garcia #2, Jake Martinez #3) each with 6 metrics: Done, Photos, Avg Time, Issues, Rating, Photos. (5) /hcp-config → 'Housecall Pro Integration' info card + HCP API Key field (pre-masked 'fak****456') + Default Employee ID field + Enabled toggle + Save Config button + yellow notice 'Until a valid API key is saved, Create Estimate actions will be simulated with a SIM-EST-xxxx id'. (6) /send-guest-link → reservation list with 'Send Link' buttons rendered. Deep happy-path modal flows not exercised per review request (fake API keys expected to fail gracefully). All new screens production-ready." No red-screen errors. Backend logs show all corresponding GETs returning 200. Not exercised this pass (flag for follow-up): deep write-path for Owner Storage QR generation, SMS Save/Test Send, PMS Connect/Sync/Disconnect, Host Inbox reply+convert modal, Checklist Hide-Done slider, and the guest-portal magic-link flow (/(guest)/welcome, help.tsx, explore.tsx) — these need a dedicated follow-up run because they exceeded the automation-tool invocation budget for this session."
     - agent: "testing"
     - message: "✅ SETUP WIZARD + PUSH NOTIFICATIONS + GUEST MESSAGE REGRESSION — 100% PASS (35/35 checks in /app/backend_test.py). (1) Setup Wizard: GET /api/setup/status returns all 7 top-level keys (steps, total, completed, progress_pct, required_done, required_total, setup_complete); steps array has exactly 7 items with expected IDs [brand, email, properties, ical, team, sms, reservations]; every step has required fields (id, title, description, complete:bool, action_label, route, priority); sms and reservations correctly marked optional=true; seed-data steps verified (properties complete=true count=4, team complete=true count=3); math consistent (required_total=5, progress_pct=40, setup_complete=false). (2) Push Notifications: POST /push/register with ExponentPushToken[test_abc123] returns {success:true}; re-registering same token upserts cleanly (no duplicate); POST /push/send {role:'admin', title, body} returns 200 with {success:true, sent:0, message:'No registered devices for recipient'} — did not crash, Expo API branch gracefully short-circuits when no tokens match; DELETE /push/unregister?token=... returns {success:true}; subsequent send after unregister still clean. Side note: admin user's role is 'property_manager' (not literal 'admin'), so tokens register under user_role='property_manager' and sending to role='admin' correctly finds 0 tokens — behavior is correct but if main agent wants to validate live Expo dispatch end-to-end, either (a) seed a user whose role==='admin' or (b) call POST /push/send with user_id= instead of role=. (3) Guest-message regression: POST /api/guest-messages still returns 200 with id + success:true after the push_notifications integration was added; push-notify call inside guest_messages.py is wrapped in try/except so any push failure cannot break the guest-message create path. (4) Scheduled iCal Sync: verified '[scheduler] started' and '[scheduler] iCal sync every 30 min' in backend startup logs — no HTTP endpoint to exercise. No critical issues. No mocked integrations."
+
+    - agent: "testing"
+    - message: "✅ GUEST OTP + DASHBOARD BADGES — 10/11 checks PASS, 1 unrelated pre-existing bug surfaced. Script: /app/backend_test_otp_badges.py. (1) Guest OTP (5/5): POST /api/guest-otp/send returns {success:true, simulated:true, code:'<6digits>', message} as expected when SMS provider is disabled; POST /api/guest-otp/verify with correct code → {success:true}, with wrong code → HTTP 400 {detail:'Invalid code.'}; GET /api/guest-otp/status → {phone_verified:true, phone:'+15551234567'}; rate limit enforced — 4 consecutive sends return [200,200,200,429] with detail 'Too many codes requested. Wait 10 minutes.' (2) Dashboard Badges (5/5 for badges itself): GET /api/badges returns all 7 required keys (host_inbox_new, outstanding_issues, urgent_issues, pending_turnovers, unread_notifications, low_inventory, setup_incomplete), all int≥0. Creating a guest message via POST /api/guest-messages correctly increments host_inbox_new (1→2). Creating an issue with priority='urgent' correctly increments urgent_issues (5→6) and outstanding_issues (11→12) — the DB insert succeeds. (3) UNRELATED pre-existing bug in POST /api/issues: endpoint returns HTTP 500 ValueError:[TypeError(\"'ObjectId' object is not iterable\")] — routes/maintenance.py line ~170 returns `doc` directly after `insert_one` which now contains Mongo's `_id` (ObjectId), making FastAPI's jsonable_encoder fail. The insert itself succeeds so badges functionality is verified. Main agent should fix this in a separate task by doing `doc.pop('_id', None)` before `return doc` (or using serialize_doc()). Does NOT affect the two APIs under this review."

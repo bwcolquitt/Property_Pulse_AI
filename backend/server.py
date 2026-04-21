@@ -58,6 +58,8 @@ from routes.hcp_integration import router as hcp_router
 from routes.scorecards import router as scorecards_router
 from routes.push_notifications import router as push_router
 from routes.setup_wizard import router as setup_router
+from routes.guest_otp import router as guest_otp_router
+from routes.badges import router as badges_router
 from scheduler import start_scheduler, stop_scheduler
 from seed import seed_database
 
@@ -135,6 +137,8 @@ app.include_router(hcp_router)
 app.include_router(scorecards_router)
 app.include_router(push_router)
 app.include_router(setup_router)
+app.include_router(guest_otp_router)
+app.include_router(badges_router)
 
 # Health check
 @app.get("/api/health")
