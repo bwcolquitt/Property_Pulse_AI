@@ -40,7 +40,7 @@ async def get_config(request: Request):
     user = await get_current_user(request, db)
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
-    config = await db.sms_config.find_one({}) or {}
+    config = await db.sms_config.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
     # Mask secrets
     for secret in ["api_key", "auth_token", "account_sid"]:
         if config.get(secret):
@@ -70,7 +70,7 @@ async def update_config(input: SmsConfigInput, request: Request):
     updates = {k: v for k, v in input.dict(exclude_unset=True).items() if v is not None and v != ""}
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
     updates["updated_by"] = user["id"]
-    await db.sms_config.update_one({}, {"$set": updates}, upsert=True)
+    await db.sms_config.update_one({"tenant_id": user.get("tenant_id", "default")}, {"$set": {**updates, "tenant_id": user.get("tenant_id", "default")}}, upsert=True)
     return {"success": True}
 
 # ===== Send =====
@@ -87,7 +87,7 @@ async def send_sms(input: SendSmsInput, request: Request):
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
 
-    config = await db.sms_config.find_one({}) or {}
+    config = await db.sms_config.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
     provider = config.get("provider", "disabled")
     enabled = config.get("enabled", False)
     from_number = config.get("from_number", "")

@@ -23,7 +23,7 @@ async def get_config(request: Request):
     user = await get_current_user(request, db)
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
-    config = await db.hcp_config.find_one({}) or {}
+    config = await db.hcp_config.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
     if config.get("api_key"):
         v = config["api_key"]
         config["api_key_masked"] = (v[:3] + "****" + v[-3:]) if len(v) > 6 else "****"
@@ -44,7 +44,7 @@ async def update_config(input: HcpConfigInput, request: Request):
         raise HTTPException(403, "Admin only")
     updates = {k: v for k, v in input.dict(exclude_unset=True).items() if v not in (None, "")}
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.hcp_config.update_one({}, {"$set": updates}, upsert=True)
+    await db.hcp_config.update_one({"tenant_id": user.get("tenant_id", "default")}, {"$set": {**updates, "tenant_id": user.get("tenant_id", "default")}}, upsert=True)
     return {"success": True}
 
 class CreateEstimateInput(BaseModel):
@@ -65,7 +65,7 @@ async def create_estimate(input: CreateEstimateInput, request: Request):
     if not issue:
         raise HTTPException(404, "Issue not found")
 
-    config = await db.hcp_config.find_one({}) or {}
+    config = await db.hcp_config.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
     api_key = config.get("api_key")
     enabled = config.get("enabled", False)
     now = datetime.now(timezone.utc).isoformat()

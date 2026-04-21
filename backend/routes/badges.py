@@ -23,8 +23,8 @@ async def get_badges(request: Request):
     low_inventory = await db.guest_inventory.count_documents({"$expr": {"$lte": ["$quantity", "$reorder_point"]}}) if hasattr(db, "guest_inventory") else 0
 
     # Setup wizard completeness
-    company = await db.company_settings.find_one({}) or {}
-    email = await db.email_config.find_one({}) or {}
+    company = await db.company_settings.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
+    email = await db.email_config.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
     ical_count = await db.ical_feeds.count_documents({})
     props = await db.properties.count_documents({"active": {"$ne": False}})
     team = await db.users.count_documents({"role": {"$in": ["cleaner", "maintenance"]}})

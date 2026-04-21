@@ -43,7 +43,7 @@ async def get_config(request: Request):
     user = await get_current_user(request, db)
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
-    config = await db.email_config.find_one({}) or {}
+    config = await db.email_config.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
     for secret in ["api_key", "smtp_password"]:
         if config.get(secret):
             v = config[secret]
@@ -73,7 +73,7 @@ async def update_config(input: EmailConfigInput, request: Request):
         raise HTTPException(403, "Admin only")
     updates = {k: v for k, v in input.dict(exclude_unset=True).items() if v not in (None, "")}
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.email_config.update_one({}, {"$set": updates}, upsert=True)
+    await db.email_config.update_one({"tenant_id": user.get("tenant_id", "default")}, {"$set": {**updates, "tenant_id": user.get("tenant_id", "default")}}, upsert=True)
     return {"success": True}
 
 class SendEmailInput(BaseModel):
@@ -91,7 +91,7 @@ async def send_email(input: SendEmailInput, request: Request):
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
 
-    config = await db.email_config.find_one({}) or {}
+    config = await db.email_config.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
     provider = config.get("provider", "disabled")
     enabled = config.get("enabled", False)
     from_email = config.get("from_email", "")

@@ -100,21 +100,23 @@ class CustomFAQList(BaseModel):
 
 # ===== Helper to get/set config sections =====
 
-async def get_config_section(db, section: str):
-    doc = await db.company_config.find_one({"section": section})
+async def get_config_section(db, section: str, tenant_id: str = "default"):
+    doc = await db.company_config.find_one({"section": section, "tenant_id": tenant_id})
     if doc:
         result = serialize_doc(doc)
         result.pop("section", None)
+        result.pop("tenant_id", None)
         return result
     return {}
 
-async def set_config_section(db, section: str, data: dict, user_id: str):
+async def set_config_section(db, section: str, data: dict, user_id: str, tenant_id: str = "default"):
     now = datetime.now(timezone.utc).isoformat()
     data["section"] = section
+    data["tenant_id"] = tenant_id
     data["updated_by"] = user_id
     data["updated_at"] = now
     await db.company_config.update_one(
-        {"section": section},
+        {"section": section, "tenant_id": tenant_id},
         {"$set": data},
         upsert=True
     )
@@ -125,17 +127,30 @@ async def set_config_section(db, section: str, data: dict, user_id: str):
 async def get_all_config(request: Request):
     """Get all company configuration. Public for guides/AI context."""
     db = get_db(request)
+    # Try to determine tenant from token (optional); fall back to default
+    tenant_id = "default"
+    try:
+        user = await get_current_user(request, db)
+        tenant_id = user.get("tenant_id", "default")
+    except Exception:
+        pass
     sections = ["profile", "contacts", "check_in_out", "house_rules",
                  "emergency_procedures", "communication", "legal", "custom_faqs"]
     config = {}
     for s in sections:
-        config[s] = await get_config_section(db, s)
+        config[s] = await get_config_section(db, s, tenant_id)
     return config
 
 @router.get("/{section}")
 async def get_config(section: str, request: Request):
     db = get_db(request)
-    return await get_config_section(db, section)
+    tenant_id = "default"
+    try:
+        user = await get_current_user(request, db)
+        tenant_id = user.get("tenant_id", "default")
+    except Exception:
+        pass
+    return await get_config_section(db, section, tenant_id)
 
 # ----- Company Profile -----
 @router.put("/profile")
@@ -144,7 +159,7 @@ async def update_profile(input: CompanyProfile, request: Request):
     user = await get_current_user(request, db)
     if user.get("role") not in ["property_manager", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin only")
-    await set_config_section(db, "profile", input.dict(), user["id"])
+    await set_config_section(db, "profile", input.dict(), user["id"], user.get("tenant_id", "default"))
     return {"success": True}
 
 # ----- Contact Directory -----
@@ -154,7 +169,7 @@ async def update_contacts(input: ContactDirectory, request: Request):
     user = await get_current_user(request, db)
     if user.get("role") not in ["property_manager", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin only")
-    await set_config_section(db, "contacts", input.dict(), user["id"])
+    await set_config_section(db, "contacts", input.dict(), user["id"], user.get("tenant_id", "default"))
     return {"success": True}
 
 # ----- Check-in/Check-out -----
@@ -164,7 +179,7 @@ async def update_check_in_out(input: CheckInOutPolicy, request: Request):
     user = await get_current_user(request, db)
     if user.get("role") not in ["property_manager", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin only")
-    await set_config_section(db, "check_in_out", input.dict(), user["id"])
+    await set_config_section(db, "check_in_out", input.dict(), user["id"], user.get("tenant_id", "default"))
     return {"success": True}
 
 # ----- House Rules -----
@@ -174,7 +189,7 @@ async def update_house_rules(input: HouseRules, request: Request):
     user = await get_current_user(request, db)
     if user.get("role") not in ["property_manager", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin only")
-    await set_config_section(db, "house_rules", input.dict(), user["id"])
+    await set_config_section(db, "house_rules", input.dict(), user["id"], user.get("tenant_id", "default"))
     return {"success": True}
 
 # ----- Emergency Procedures -----
@@ -194,7 +209,7 @@ async def update_communication(input: CommunicationPrefs, request: Request):
     user = await get_current_user(request, db)
     if user.get("role") not in ["property_manager", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin only")
-    await set_config_section(db, "communication", input.dict(), user["id"])
+    await set_config_section(db, "communication", input.dict(), user["id"], user.get("tenant_id", "default"))
     return {"success": True}
 
 # ----- Legal / Policies -----
@@ -204,7 +219,7 @@ async def update_legal(input: LegalPolicies, request: Request):
     user = await get_current_user(request, db)
     if user.get("role") not in ["property_manager", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin only")
-    await set_config_section(db, "legal", input.dict(), user["id"])
+    await set_config_section(db, "legal", input.dict(), user["id"], user.get("tenant_id", "default"))
     return {"success": True}
 
 # ----- Custom FAQs -----

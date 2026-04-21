@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Activi
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../src/constants/theme';
 import api from '../src/utils/api';
+import { useFeature } from '../src/hooks/useFeature';
 
 export default function SmsConfigScreen() {
+  const { hasFeature, showUpgrade, UpgradeModalComponent } = useFeature('sms');
   const [providers, setProviders] = useState<any[]>([]);
   const [config, setConfig] = useState<any>({ provider: 'disabled', enabled: false });
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,22 @@ export default function SmsConfigScreen() {
   };
 
   if (loading) return <View style={styles.loading}><ActivityIndicator size="large" color={Colors.primary} /></View>;
+
+  if (!hasFeature) {
+    return (
+      <View style={styles.container}>
+        <View style={{ flex: 1, padding: Spacing.lg, justifyContent: 'center', alignItems: 'center', gap: 12 }}>
+          <Ionicons name="lock-closed" size={48} color={Colors.accent} />
+          <Text style={{ fontSize: 20, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center' }}>SMS is a Pro feature</Text>
+          <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: 'center' }}>Upgrade to Pro to send automated check-in links, checkout reminders, and host messages via SMS.</Text>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.primary, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10, marginTop: 8 }} onPress={showUpgrade}>
+            <Ionicons name="rocket" size={16} color="#fff" /><Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>Upgrade to Pro</Text>
+          </TouchableOpacity>
+        </View>
+        {UpgradeModalComponent}
+      </View>
+    );
+  }
 
   const currentProvider = providers.find(p => p.id === config.provider);
 
