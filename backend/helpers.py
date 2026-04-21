@@ -17,10 +17,12 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
-def create_access_token(user_id: str, email: str) -> str:
+def create_access_token(user_id: str, email: str, tenant_id: str = "default", is_platform_admin: bool = False) -> str:
     payload = {
         "sub": user_id,
         "email": email,
+        "tenant_id": tenant_id,
+        "is_platform_admin": is_platform_admin,
         "exp": datetime.now(timezone.utc) + timedelta(hours=24),
         "type": "access"
     }
@@ -52,11 +54,57 @@ async def get_current_user(request: Request, db) -> dict:
         user["id"] = str(user["_id"])
         del user["_id"]
         user.pop("password_hash", None)
+        # Ensure tenant_id always present (from JWT if available, fallback to user doc, else default tenant)
+        user["tenant_id"] = payload.get("tenant_id") or user.get("tenant_id", "default")
+        user["is_platform_admin"] = bool(user.get("is_platform_admin", False))
         return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+def tenant_filter(user: dict, extra: dict = None) -> dict:
+    """Build a query filter that restricts results to the user's tenant.
+    Platform admins bypass the filter (see all tenants' data).
+    """
+    q = dict(extra or {})
+    if not user.get("is_platform_admin"):
+        q["tenant_id"] = user.get("tenant_id", "default")
+    return q
+
+def tenant_doc(user: dict, doc: dict) -> dict:
+    """Ensure a doc being inserted gets stamped with the user's tenant_id."""
+    if "tenant_id" not in doc:
+        doc["tenant_id"] = user.get("tenant_id", "default")
+    return doc
+
+# ===== Feature gating =====
+FEATURE_TIER = {
+    # Pro tier features
+    "sms": "pro", "email": "pro", "pms": "pro", "ai": "pro", "otp": "pro",
+    "white_label": "pro", "push": "pro", "assets": "pro", "owner_storage": "pro",
+    "csv_export": "pro", "advanced_reports": "pro",
+    # Enterprise tier features
+    "hcp": "enterprise", "scorecards": "enterprise", "api_access": "enterprise",
+    "multi_admin": "enterprise", "custom_domain": "enterprise",
+}
+TIER_ORDER = {"starter": 1, "pro": 2, "enterprise": 3}
+
+async def check_feature(db, user: dict, feature: str) -> bool:
+    """Return True if user's tenant plan unlocks this feature."""
+    if user.get("is_platform_admin"):
+        return True
+    tenant_id = user.get("tenant_id", "default")
+    tenant = await db.tenants.find_one({"tenant_id": tenant_id})
+    if not tenant:
+        return False
+    plan = tenant.get("plan", "starter")
+    required = FEATURE_TIER.get(feature, "starter")
+    return TIER_ORDER.get(plan, 0) >= TIER_ORDER.get(required, 99)
+
+async def require_feature(db, user: dict, feature: str):
+    if not await check_feature(db, user, feature):
+        raise HTTPException(status_code=402, detail=f"Feature '{feature}' requires upgrade. Please upgrade your plan.")
 
 def serialize_doc(doc):
     """Convert MongoDB document to JSON-serializable dict"""

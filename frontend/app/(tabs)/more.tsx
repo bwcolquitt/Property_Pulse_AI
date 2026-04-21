@@ -8,6 +8,7 @@ import { useAuth } from '../../src/context/AuthContext';
 
 const menuItems = [
   { label: 'Setup Wizard', icon: 'rocket', route: '/setup-wizard', color: Colors.primary },
+  { label: 'Platform Admin', icon: 'shield', route: '/platform-admin', color: Colors.redUrgent, platformOnly: true },
   { label: 'Host Inbox', icon: 'mail', route: '/host-inbox', color: Colors.redUrgent },
   { label: 'Send Guest Access', icon: 'link', route: '/send-guest-link', color: Colors.primary },
   { label: 'Properties', icon: 'home', route: '/property/list', color: Colors.primary },
@@ -68,7 +69,7 @@ export default function MoreScreen() {
 
       {/* Menu Items */}
       <View style={styles.menuSection}>
-        {menuItems.map((item, i) => {
+        {menuItems.filter(it => !it.platformOnly || user?.is_platform_admin).map((item, i) => {
           let badge: number | null = null;
           if (badges) {
             if (item.route === '/host-inbox') badge = badges.host_inbox_new;

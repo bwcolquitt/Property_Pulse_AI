@@ -86,9 +86,9 @@ export default function LandingScreen() {
         <TouchableOpacity
           testID="get-started-btn"
           style={styles.primaryBtn}
-          onPress={() => router.push('/register')}
+          onPress={() => router.push('/signup')}
         >
-          <Text style={styles.primaryBtnText}>Get Started Free</Text>
+          <Text style={styles.primaryBtnText}>Start 14-Day Free Trial</Text>
           <Ionicons name="arrow-forward" size={20} color={Colors.primaryForeground} />
         </TouchableOpacity>
         <TouchableOpacity

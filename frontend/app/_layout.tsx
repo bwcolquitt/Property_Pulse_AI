@@ -94,6 +94,8 @@ function RootNavigator() {
       <Stack.Screen name="hcp-config" options={{ headerShown: true, title: 'Housecall Pro' }} />
       <Stack.Screen name="setup-wizard" options={{ headerShown: true, title: 'Setup Wizard' }} />
       <Stack.Screen name="verify-phone" options={{ headerShown: true, title: 'Verify Phone' }} />
+      <Stack.Screen name="signup" options={{ headerShown: false }} />
+      <Stack.Screen name="platform-admin" options={{ headerShown: true, title: 'Platform Admin' }} />
     </Stack>
   );
 }

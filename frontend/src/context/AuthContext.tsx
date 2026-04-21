@@ -7,6 +7,9 @@ interface User {
   first_name: string;
   last_name: string;
   role: string;
+  tenant_id?: string;
+  is_platform_admin?: boolean;
+  is_tenant_admin?: boolean;
 }
 
 interface AuthContextType {

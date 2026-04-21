@@ -60,7 +60,9 @@ from routes.push_notifications import router as push_router
 from routes.setup_wizard import router as setup_router
 from routes.guest_otp import router as guest_otp_router
 from routes.badges import router as badges_router
+from routes.tenants import router as tenants_router, platform_router
 from scheduler import start_scheduler, stop_scheduler
+from migrate_tenants import run_migration as run_tenant_migration
 from seed import seed_database
 
 # Configure logging
@@ -139,6 +141,8 @@ app.include_router(push_router)
 app.include_router(setup_router)
 app.include_router(guest_otp_router)
 app.include_router(badges_router)
+app.include_router(tenants_router)
+app.include_router(platform_router)
 
 # Health check
 @app.get("/api/health")
@@ -149,6 +153,10 @@ async def health_check():
 async def startup_event():
     logger.info("Starting Property Pulse backend...")
     await seed_database(db)
+    try:
+        await run_tenant_migration(db)
+    except Exception as e:
+        logger.warning(f"Tenant migration failed: {e}")
     try:
         start_scheduler(db)
     except Exception as e:

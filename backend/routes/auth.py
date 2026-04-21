@@ -44,7 +44,9 @@ async def register(input: RegisterInput, request: Request, response: Response):
     }
     result = await db.users.insert_one(user_doc)
     user_id = str(result.inserted_id)
-    access_token = create_access_token(user_id, email)
+    tenant_id = user_doc.get("tenant_id", "default")
+    is_platform_admin = bool(user_doc.get("is_platform_admin", False))
+    access_token = create_access_token(user_id, email, tenant_id, is_platform_admin)
     refresh_token = create_refresh_token(user_id)
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=86400, path="/")
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
@@ -54,6 +56,7 @@ async def register(input: RegisterInput, request: Request, response: Response):
         "first_name": input.first_name,
         "last_name": input.last_name,
         "role": input.role,
+        "tenant_id": tenant_id,
         "token": access_token
     }
 
@@ -67,7 +70,9 @@ async def login(input: LoginInput, request: Request, response: Response):
     if not verify_password(input.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     user_id = str(user["_id"])
-    access_token = create_access_token(user_id, email)
+    tenant_id = user.get("tenant_id", "default")
+    is_platform_admin = bool(user.get("is_platform_admin", False))
+    access_token = create_access_token(user_id, email, tenant_id, is_platform_admin)
     refresh_token = create_refresh_token(user_id)
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=86400, path="/")
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
@@ -77,6 +82,8 @@ async def login(input: LoginInput, request: Request, response: Response):
         "first_name": user.get("first_name", ""),
         "last_name": user.get("last_name", ""),
         "role": user.get("role", "property_manager"),
+        "tenant_id": tenant_id,
+        "is_platform_admin": is_platform_admin,
         "token": access_token
     }
 
