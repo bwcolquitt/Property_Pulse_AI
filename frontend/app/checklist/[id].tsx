@@ -25,6 +25,12 @@ export default function ChecklistScreen() {
   const [issuePriority, setIssuePriority] = useState('medium');
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issuePhotos, setIssuePhotos] = useState<string[]>([]);
+  // Notes
+  const [noteModal, setNoteModal] = useState<any>(null); // { taskId, taskTitle }
+  const [noteSubject, setNoteSubject] = useState('');
+  const [noteBody, setNoteBody] = useState('');
+  const [noteAsIssue, setNoteAsIssue] = useState(false);
+  const [noteSubmitting, setNoteSubmitting] = useState(false);
   // Workflow hints
   const [hints, setHints] = useState<any[]>([]);
   const [showHints, setShowHints] = useState(false);
@@ -99,6 +105,35 @@ export default function ChecklistScreen() {
         setIssuePhotos(prev => [...prev, result.assets[0].base64!]);
       }
     } catch { addIssuePhoto(); }
+  };
+
+  const submitNote = async () => {
+    if (!noteSubject.trim()) { Alert.alert('Required', 'Enter a subject'); return; }
+    setNoteSubmitting(true);
+    try {
+      // Save note to the task
+      await api.post('/media/upload', {
+        owner_type: 'checklist_note',
+        owner_id: noteModal?.taskId,
+        media_type: 'note',
+        base64_data: JSON.stringify({ subject: noteSubject, body: noteBody, created_at: new Date().toISOString() }),
+      });
+      // If "make it an issue" is checked, also create an issue
+      if (noteAsIssue) {
+        const turnover = await api.get(`/turnovers/${id}`);
+        const propId = turnover.data?.property_id;
+        await api.post('/issues-v2/quick-report', {
+          property_id: propId,
+          turnover_id: id,
+          title: noteSubject,
+          description: `${noteBody}\n\n[From task note: ${noteModal?.taskTitle}]`,
+          priority: 'medium',
+        });
+      }
+      Alert.alert('Saved', noteAsIssue ? 'Note saved and issue created' : 'Note saved');
+      setNoteModal(null); setNoteSubject(''); setNoteBody(''); setNoteAsIssue(false);
+    } catch { Alert.alert('Error', 'Failed to save note'); }
+    finally { setNoteSubmitting(false); }
   };
 
   const toggleItem = async (item: any) => {
@@ -244,13 +279,40 @@ export default function ChecklistScreen() {
         </View>
       )}
 
-      {/* Workflow Hints Banner */}
-      {showHints && hints.length > 0 && (
+      {/* Workflow Hints Banner - role-specific based on filter */}
+      {showHints && (
         <View style={styles.hintsBanner}>
-          <View style={styles.hintsHeader}><Ionicons name="bulb" size={16} color={Colors.accent} /><Text style={styles.hintsTitle}>Smart Workflow Tips</Text></View>
-          {hints.map((h: any, i: number) => (
-            <View key={i} style={styles.hintRow}><Text style={styles.hintCategory}>{h.category}</Text><Text style={styles.hintText}>{h.hint}</Text></View>
-          ))}
+          <View style={styles.hintsHeader}>
+            <Ionicons name="bulb" size={16} color={Colors.accent} />
+            <Text style={styles.hintsTitle}>
+              {typeFilter === 'cleaning' ? 'Cleaning Tips' : typeFilter === 'maintenance' ? 'Maintenance Tips' : typeFilter === 'pool' ? 'Pool & Spa Tips' : 'Smart Workflow Tips'}
+            </Text>
+          </View>
+          {typeFilter === 'cleaning' || typeFilter === 'all' ? (
+            <>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Order</Text><Text style={styles.hintText}>Work top to bottom, back to front in each room</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Photos</Text><Text style={styles.hintText}>Take before & after photos of every bathroom and kitchen</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Linens</Text><Text style={styles.hintText}>Check for stains before placing fresh linens — replace damaged ones</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Final</Text><Text style={styles.hintText}>Do a walkthrough as if you were the guest arriving</Text></View>
+            </>
+          ) : null}
+          {typeFilter === 'maintenance' ? (
+            <>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Safety</Text><Text style={styles.hintText}>Always turn off power/water before starting repairs</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Photos</Text><Text style={styles.hintText}>Photograph the problem BEFORE and AFTER your repair</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Parts</Text><Text style={styles.hintText}>Note model numbers and serial numbers for replacement parts</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Report</Text><Text style={styles.hintText}>If a repair needs more work, report it immediately — don't leave it unfinished</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Access</Text><Text style={styles.hintText}>Check Service Notes for property codes before arriving</Text></View>
+            </>
+          ) : null}
+          {typeFilter === 'pool' ? (
+            <>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Chem</Text><Text style={styles.hintText}>Test pH (7.2-7.6) and chlorine (1-3 ppm) before every guest arrival</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Safety</Text><Text style={styles.hintText}>Check pool fence/gate latches and drain covers every visit</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Filter</Text><Text style={styles.hintText}>Clean skimmer baskets and check pump pressure gauge</Text></View>
+              <View style={styles.hintRow}><Text style={styles.hintCategory}>Spa</Text><Text style={styles.hintText}>Ensure spa jets work and water is at 102-104°F before guest check-in</Text></View>
+            </>
+          ) : null}
         </View>
       )}
 
@@ -279,8 +341,10 @@ export default function ChecklistScreen() {
           <TouchableOpacity testID="reorder-toggle" style={[styles.reorderBtn, reorderMode && styles.reorderBtnActive]} onPress={() => setReorderMode(!reorderMode)}>
             <Ionicons name="swap-vertical" size={16} color={reorderMode ? Colors.primaryForeground : Colors.textSecondary} />
           </TouchableOpacity>
-          <Text style={styles.toggleLabel}>Hide done</Text>
-          <Switch testID="hide-completed-toggle" value={hideCompleted} onValueChange={setHideCompleted} trackColor={{ true: Colors.primary, false: Colors.border }} thumbColor={Colors.surface} />
+          <TouchableOpacity testID="hide-completed-toggle" style={[styles.hideBtn, hideCompleted && styles.hideBtnActive]} onPress={() => setHideCompleted(!hideCompleted)}>
+            <Ionicons name={hideCompleted ? 'eye-off' : 'eye'} size={14} color={hideCompleted ? '#fff' : Colors.textSecondary} />
+            <Text style={[styles.hideBtnText, hideCompleted && { color: '#fff' }]}>{hideCompleted ? 'Hidden' : 'Hide Done'}</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -302,6 +366,17 @@ export default function ChecklistScreen() {
 
       {allDone && (
         <TouchableOpacity testID="submit-checklist-btn" style={styles.submitBtn} onPress={() => {
+          // Double-check all items are truly complete
+          const incomplete = items.filter(i => i.status !== 'completed');
+          const missingPhotos = items.filter(i => i.requires_photo && !(photosTaken[i.id] > 0));
+          if (incomplete.length > 0) {
+            Alert.alert('Not Complete', `${incomplete.length} task(s) still need to be completed before submitting.`);
+            return;
+          }
+          if (missingPhotos.length > 0) {
+            Alert.alert('Photos Required', `${missingPhotos.length} task(s) still need required photos.`);
+            return;
+          }
           Alert.alert('Checklist Complete!', 'All tasks done. Mark turnover as ready for inspection?', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Submit', onPress: () => router.back() },
@@ -310,6 +385,12 @@ export default function ChecklistScreen() {
           <Ionicons name="checkmark-circle" size={20} color="#fff" />
           <Text style={styles.submitBtnText}>Submit as Ready — {progress}%</Text>
         </TouchableOpacity>
+      )}
+      {!allDone && totalItems > 0 && (
+        <View style={styles.incompleteBar}>
+          <Ionicons name="information-circle" size={16} color={Colors.yellowAtRisk} />
+          <Text style={styles.incompleteText}>{totalItems - completedItems} task{totalItems - completedItems !== 1 ? 's' : ''} remaining — complete all to submit</Text>
+        </View>
       )}
 
       {/* Checklist by Floor */}
@@ -373,18 +454,24 @@ export default function ChecklistScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         stickySectionHeadersEnabled
-        renderSectionHeader={({ section }) => (
+        renderSectionHeader={({ section }) => {
+          const floorProgress = section.total > 0 ? (section.completed / section.total) * 100 : 0;
+          return (
           <View style={styles.floorHeader}>
             <Ionicons name={section.title.toLowerCase().includes('exterior') || section.title.toLowerCase().includes('rooftop') ? 'sunny' : 'layers'} size={18} color={Colors.accent} />
             <Text style={styles.floorTitle}>{section.title}</Text>
             <TouchableOpacity testID={`issue-floor-${section.title}`} style={styles.floorIssueBtn} onPress={() => setIssueModal({ floor: section.title, room_name: '' })}>
               <Ionicons name="warning" size={16} color={Colors.redUrgent} />
             </TouchableOpacity>
-            <View style={styles.floorBadge}>
-              <Text style={styles.floorCount}>{section.completed}/{section.total}</Text>
+            <View style={styles.floorProgressWrap}>
+              <View style={styles.floorProgressBar}>
+                <View style={[styles.floorProgressFill, { width: `${floorProgress}%`, backgroundColor: floorProgress === 100 ? Colors.greenReady : Colors.primary }]} />
+              </View>
+              <Text style={[styles.floorCount, floorProgress === 100 && { color: Colors.greenReady }]}>{section.completed}/{section.total}</Text>
             </View>
           </View>
-        )}
+          );
+        }}
         renderItem={({ item: task }) => {
           const hasPhoto = (photosTaken[task.id] || 0) > 0;
           const needsPhoto = task.requires_photo && !hasPhoto;
@@ -439,7 +526,7 @@ export default function ChecklistScreen() {
                   )}
                 </View>
               </TouchableOpacity>
-              {/* Photo buttons + Reference upload */}
+              {/* Photo buttons + Notes */}
               <View style={styles.photoActions}>
                 <TouchableOpacity testID={`photo-camera-${task.id}`} style={[styles.photoBtn, needsPhoto && styles.photoBtnUrgent]} onPress={() => takePhoto(task)}>
                   {uploading === task.id ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="camera" size={18} color={needsPhoto ? Colors.redUrgent : Colors.primary} />}
@@ -447,23 +534,13 @@ export default function ChecklistScreen() {
                 <TouchableOpacity testID={`photo-gallery-${task.id}`} style={styles.photoBtn} onPress={() => pickPhoto(task)}>
                   <Ionicons name="images" size={18} color={Colors.secondary} />
                 </TouchableOpacity>
-                <TouchableOpacity testID={`ref-photo-${task.id}`} style={[styles.photoBtn, { borderColor: Colors.blueAssigned + '40' }]} onPress={async () => {
-                  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.7 });
-                  if (!result.canceled && result.assets?.[0]) {
-                    const asset = result.assets[0];
-                    const isVideo = asset.type === 'video';
-                    try {
-                      await api.post('/media/upload', { 
-                        entity_type: 'checklist_reference', 
-                        entity_id: task.id, 
-                        media_type: isVideo ? 'reference_video' : 'reference_photo',
-                        base64_data: asset.uri 
-                      });
-                      Alert.alert('Uploaded', `Reference ${isVideo ? 'video' : 'photo'} added`);
-                    } catch { Alert.alert('Error', 'Upload failed'); }
-                  }
+                <TouchableOpacity testID={`note-${task.id}`} style={[styles.photoBtn, { borderColor: Colors.accent + '40' }]} onPress={() => {
+                  setNoteModal({ taskId: task.id, taskTitle: task.title });
+                  setNoteSubject('');
+                  setNoteBody('');
+                  setNoteAsIssue(false);
                 }}>
-                  <Ionicons name="attach" size={18} color={Colors.blueAssigned} />
+                  <Ionicons name="document-text" size={18} color={Colors.accent} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -478,6 +555,41 @@ export default function ChecklistScreen() {
         }
       />
       )}
+
+      {/* Note Modal */}
+      <Modal visible={!!noteModal} transparent animationType="fade" onRequestClose={() => setNoteModal(null)}>
+        <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={styles.modalScroll}>
+            <View style={styles.modal}>
+              <View style={styles.modalTitleRow}>
+                <Ionicons name="document-text" size={22} color={Colors.accent} />
+                <Text style={styles.modalTitle}>Add Note</Text>
+              </View>
+              {noteModal?.taskTitle && <Text style={styles.modalLocation}>Task: {noteModal.taskTitle}</Text>}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Subject *</Text>
+                <TextInput style={styles.textInput} placeholder="Note subject" placeholderTextColor={Colors.grayInactive} value={noteSubject} onChangeText={setNoteSubject} />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput style={[styles.textInput, { height: 100 }]} placeholder="Details..." placeholderTextColor={Colors.grayInactive} value={noteBody} onChangeText={setNoteBody} multiline />
+              </View>
+              <TouchableOpacity style={styles.issueToggle} onPress={() => setNoteAsIssue(!noteAsIssue)}>
+                <Ionicons name={noteAsIssue ? 'checkbox' : 'square-outline'} size={22} color={noteAsIssue ? Colors.redUrgent : Colors.grayInactive} />
+                <Text style={styles.issueToggleText}>Also create as an Issue</Text>
+              </TouchableOpacity>
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.modalCancel} onPress={() => setNoteModal(null)}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalSubmit, { backgroundColor: Colors.accent }]} onPress={submitNote} disabled={noteSubmitting}>
+                  {noteSubmitting ? <ActivityIndicator color="#fff" /> : <><Ionicons name="checkmark" size={16} color="#fff" /><Text style={styles.modalSubmitText}>Save Note</Text></>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
 
       {/* Issue Report Modal */}
       <Modal visible={!!issueModal} transparent animationType="fade" onRequestClose={() => setIssueModal(null)}>
@@ -576,7 +688,9 @@ const styles = StyleSheet.create({
   typeBtnText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
   typeBtnTextActive: { color: Colors.primaryForeground },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  toggleLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  hideBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
+  hideBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  hideBtnText: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary },
   // Submit
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.greenReady, marginHorizontal: Spacing.md, marginTop: Spacing.sm, paddingVertical: 14, borderRadius: 10 },
   submitBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
@@ -587,8 +701,10 @@ const styles = StyleSheet.create({
   // Floor Header
   floorHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: 10, backgroundColor: Colors.surfaceSecondary, borderBottomWidth: 1, borderBottomColor: Colors.border },
   floorTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  floorBadge: { backgroundColor: Colors.primary + '15', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
-  floorCount: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+  floorProgressWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 80 },
+  floorProgressBar: { flex: 1, height: 6, backgroundColor: Colors.border, borderRadius: 3, overflow: 'hidden' },
+  floorProgressFill: { height: 6, borderRadius: 3 },
+  floorCount: { fontSize: 12, fontWeight: '700', color: Colors.primary, minWidth: 28, textAlign: 'right' },
   // Task Card
   taskCard: { backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
   taskMain: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, paddingHorizontal: Spacing.md, paddingTop: Spacing.sm, paddingBottom: 4 },
@@ -657,4 +773,10 @@ const styles = StyleSheet.create({
   issuePhotoBtnText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
   issuePhotoCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   issuePhotoCountText: { fontSize: 12, fontWeight: '600', color: Colors.greenReady },
+  // Note modal
+  issueToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  issueToggleText: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  // Incomplete bar
+  incompleteBar: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: Spacing.md, paddingVertical: 10, paddingHorizontal: Spacing.md, borderRadius: 10, backgroundColor: Colors.yellowAtRisk + '10', borderWidth: 1, borderColor: Colors.yellowAtRisk + '25' },
+  incompleteText: { fontSize: 13, fontWeight: '600', color: Colors.yellowAtRisk, flex: 1 },
 });
