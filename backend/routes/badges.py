@@ -1,6 +1,7 @@
 """Dashboard Badges - unread counts for dashboard/nav indicators."""
 from fastapi import APIRouter, Request, HTTPException
 from helpers import get_current_user
+from tenant_db import get_tenant_db
 
 router = APIRouter(prefix="/api/badges", tags=["badges"])
 
@@ -10,8 +11,8 @@ def get_db(request: Request):
 @router.get("")
 async def get_badges(request: Request):
     """Return all badge counts used for UI indicators in one round trip."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         return {}
 
@@ -20,11 +21,11 @@ async def get_badges(request: Request):
     urgent_issues = await db.issues.count_documents({"priority": "urgent", "status": {"$ne": "completed"}})
     pending_turnovers = await db.turnovers.count_documents({"status": {"$in": ["new", "assigned", "in_progress"]}})
     unread_notifications = await db.notifications.count_documents({"read": False})
-    low_inventory = await db.guest_inventory.count_documents({"$expr": {"$lte": ["$quantity", "$reorder_point"]}}) if hasattr(db, "guest_inventory") else 0
+    low_inventory = await db.guest_inventory.count_documents({"$expr": {"$lte": ["$quantity", "$reorder_point"]}})
 
-    # Setup wizard completeness
-    company = await db.company_settings.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
-    email = await db.email_config.find_one({"tenant_id": user.get("tenant_id", "default")}) or {}
+    # Setup wizard completeness (all tenant-scoped via tdb)
+    company = await db.company_settings.find_one({}) or {}
+    email = await db.email_config.find_one({}) or {}
     ical_count = await db.ical_feeds.count_documents({})
     props = await db.properties.count_documents({"active": {"$ne": False}})
     team = await db.users.count_documents({"role": {"$in": ["cleaner", "maintenance"]}})
