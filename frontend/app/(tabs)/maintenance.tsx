@@ -83,6 +83,30 @@ export default function MaintenanceTab() {
                   {issue.estimate_amount > 0 && <Text style={styles.estimate}>${issue.estimate_amount}</Text>}
                   {issue.photos?.length > 0 && <View style={styles.photoCount}><Ionicons name="camera" size={12} color={Colors.blueAssigned} /><Text style={styles.photoCountText}>{issue.photos.length}</Text></View>}
                 </View>
+                {/* Recurring / Still Exists badge */}
+                {issue.title?.startsWith('[RECURRING]') && (
+                  <View style={styles.recurringBadge}><Ionicons name="repeat" size={12} color={Colors.redUrgent} /><Text style={styles.recurringText}>Recurring Issue</Text></View>
+                )}
+                <TouchableOpacity style={styles.stillExistsBtn} onPress={() => {
+                  Alert.alert('Still Exists?', `Confirm "${issue.title}" is still an open problem?`, [
+                    { text: 'Cancel' },
+                    { text: 'Still Exists', style: 'destructive', onPress: async () => {
+                      try {
+                        await api.post('/issues-v2/quick-report', {
+                          property_id: issue.property_id,
+                          title: issue.title?.startsWith('[RECURRING]') ? issue.title : `[RECURRING] ${issue.title}`,
+                          description: `Still exists as of ${new Date().toLocaleDateString()}. Original: ${issue.description || ''}`,
+                          priority: 'high',
+                        });
+                        Alert.alert('Flagged', 'Marked as still existing. Admin notified for permanent fix.');
+                        fetchData();
+                      } catch { Alert.alert('Error', 'Failed'); }
+                    }},
+                  ]);
+                }}>
+                  <Ionicons name="repeat" size={13} color={Colors.redUrgent} />
+                  <Text style={styles.stillExistsText}>Still Exists</Text>
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           );
@@ -144,6 +168,10 @@ const styles = StyleSheet.create({
   estimate: { fontSize: 11, fontWeight: '700', color: Colors.accent },
   photoCount: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   photoCountText: { fontSize: 11, fontWeight: '600', color: Colors.blueAssigned },
+  recurringBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: Colors.redUrgent + '10', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  recurringText: { fontSize: 10, fontWeight: '700', color: Colors.redUrgent },
+  stillExistsBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: Colors.redUrgent + '40', backgroundColor: Colors.redUrgent + '06', marginTop: 4 },
+  stillExistsText: { fontSize: 11, fontWeight: '700', color: Colors.redUrgent },
   empty: { alignItems: 'center', paddingVertical: 60, gap: Spacing.sm },
   emptyTitle: { fontSize: 20, fontWeight: '800', color: Colors.greenReady },
   emptyText: { fontSize: 14, color: Colors.textSecondary },

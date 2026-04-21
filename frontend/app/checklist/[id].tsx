@@ -111,27 +111,27 @@ export default function ChecklistScreen() {
     if (!noteSubject.trim()) { Alert.alert('Required', 'Enter a subject'); return; }
     setNoteSubmitting(true);
     try {
-      // Save note to the task
+      // Save the note
       await api.post('/media/upload', {
         owner_type: 'checklist_note',
         owner_id: noteModal?.taskId,
         media_type: 'note',
         base64_data: JSON.stringify({ subject: noteSubject, body: noteBody, created_at: new Date().toISOString() }),
       });
-      // If "make it an issue" is checked, also create an issue
+      // If "make it an issue" is checked, open the issue modal with pre-filled data
       if (noteAsIssue) {
-        const turnover = await api.get(`/turnovers/${id}`);
-        const propId = turnover.data?.property_id;
-        await api.post('/issues-v2/quick-report', {
-          property_id: propId,
-          turnover_id: id,
-          title: noteSubject,
-          description: `${noteBody}\n\n[From task note: ${noteModal?.taskTitle}]`,
-          priority: 'medium',
-        });
+        setNoteModal(null);
+        setIssueTitle(noteSubject);
+        setIssueDesc(noteBody + (noteModal?.taskTitle ? `\n\n[From task: ${noteModal.taskTitle}]` : ''));
+        setIssuePriority('medium');
+        setIssuePhotos([]);
+        setIssueModal({ global: true, floor: '', room_name: noteModal?.taskTitle || '' });
+        Alert.alert('Note Saved', 'Now complete the issue report with priority and photos.');
+      } else {
+        Alert.alert('Saved', 'Note saved');
+        setNoteModal(null);
       }
-      Alert.alert('Saved', noteAsIssue ? 'Note saved and issue created' : 'Note saved');
-      setNoteModal(null); setNoteSubject(''); setNoteBody(''); setNoteAsIssue(false);
+      setNoteSubject(''); setNoteBody(''); setNoteAsIssue(false);
     } catch { Alert.alert('Error', 'Failed to save note'); }
     finally { setNoteSubmitting(false); }
   };
@@ -339,44 +339,46 @@ export default function ChecklistScreen() {
         </View>
       </View>
 
-      {/* Action Row: AI Order, Reorder, Hide Done */}
+      {/* Action Row: AI Order, Reorder, Hide Done Items */}
       <View style={styles.actionBar}>
-        <TouchableOpacity testID="ai-order-btn" style={styles.aiOrderBtn} onPress={async () => {
-          try {
-            // AI Smart Order: prioritize tasks that need "soak time" (pool/spa), then exterior top-down, then interior
-            const reordered = [...items].sort((a, b) => {
-              // Priority 1: Pool/spa tasks first (need run time)
-              const aPool = (a.room_name || '').toLowerCase().includes('pool') || (a.room_name || '').toLowerCase().includes('spa') || (a.room_name || '').toLowerCase().includes('jacuzzi') || (a.title || '').toLowerCase().includes('spa') || (a.title || '').toLowerCase().includes('pool') || (a.title || '').toLowerCase().includes('jacuzzi');
-              const bPool = (b.room_name || '').toLowerCase().includes('pool') || (b.room_name || '').toLowerCase().includes('spa') || (b.room_name || '').toLowerCase().includes('jacuzzi') || (b.title || '').toLowerCase().includes('spa') || (b.title || '').toLowerCase().includes('pool') || (b.title || '').toLowerCase().includes('jacuzzi');
-              if (aPool && !bPool) return -1;
-              if (!aPool && bPool) return 1;
-              // Priority 2: Exterior before interior (do outside while pool runs)
-              if (!a.is_inside && b.is_inside) return -1;
-              if (a.is_inside && !b.is_inside) return 1;
-              // Priority 3: Higher floors first (work down)
-              const floorNum = (f: string) => { const m = f?.match(/(\d+)/); return m ? parseInt(m[1]) : 0; };
-              const af = floorNum(a.floor); const bf = floorNum(b.floor);
-              if (af !== bf) return bf - af;
-              // Priority 4: Incomplete before complete
-              if (a.status !== 'completed' && b.status === 'completed') return -1;
-              if (a.status === 'completed' && b.status !== 'completed') return 1;
-              return 0;
-            });
-            setItems(reordered);
-            try { await api.post('/admin/reorder-checklist', { turnover_id: id, item_order: reordered.map(i => i.id) }); } catch {}
-            Alert.alert('AI Optimized', 'Tasks reordered: Pool/spa first (needs run time), then exterior top-down, then interior.');
-          } catch { Alert.alert('Error', 'Failed to optimize'); }
+        <TouchableOpacity testID="ai-order-btn" style={styles.aiOrderBtn} onPress={() => {
+          // AI Smart Order: prioritize tasks that need "soak time" (pool/spa), then exterior top-down, then interior
+          const scored = items.map((item, origIdx) => {
+            let score = 0;
+            const nameL = (item.room_name || '').toLowerCase() + ' ' + (item.title || '').toLowerCase();
+            // Pool/spa/jacuzzi first (need run time for jets)
+            if (nameL.includes('pool') || nameL.includes('spa') || nameL.includes('jacuzzi') || nameL.includes('hot tub')) score += 1000;
+            // BBQ/grill tasks early (preheat time)
+            if (nameL.includes('bbq') || nameL.includes('grill')) score += 800;
+            // Exterior/outside before interior (do while pool runs)
+            if (!item.is_inside || nameL.includes('exterior') || nameL.includes('rooftop') || nameL.includes('patio') || nameL.includes('deck') || nameL.includes('yard')) score += 600;
+            // Higher floors before lower (work down)
+            const floorMatch = (item.floor || '').match(/(\d+)/);
+            const floorNum = floorMatch ? parseInt(floorMatch[1]) : 0;
+            score += floorNum * 50;
+            // Incomplete before complete
+            if (item.status !== 'completed') score += 200;
+            return { ...item, _aiScore: score, _origIdx: origIdx };
+          });
+          scored.sort((a, b) => b._aiScore - a._aiScore);
+          const reordered = scored.map(({ _aiScore, _origIdx, ...rest }) => rest);
+          setItems(reordered as any);
+          // Save to backend
+          api.post('/admin/reorder-checklist', { turnover_id: id, item_order: reordered.map((i: any) => i.id) }).catch(() => {});
+          Alert.alert('AI Optimized', 'Checklist reordered:\n\n1. Pool/Spa/Jacuzzi (start jets first)\n2. BBQ/Grill (preheat)\n3. Exterior/Rooftop (while pool runs)\n4. Higher floors → Lower floors\n5. Open tasks before completed');
         }}>
-          <Ionicons name="sparkles" size={14} color="#fff" />
+          <Ionicons name="sparkles" size={16} color="#fff" />
           <Text style={styles.aiOrderText}>AI Order</Text>
         </TouchableOpacity>
+
         <TouchableOpacity testID="reorder-toggle" style={[styles.reorderBtn, reorderMode && styles.reorderBtnActive]} onPress={() => setReorderMode(!reorderMode)}>
-          <Ionicons name="swap-vertical" size={14} color={reorderMode ? '#fff' : Colors.textSecondary} />
+          <Ionicons name="swap-vertical" size={16} color={reorderMode ? '#fff' : Colors.textSecondary} />
           <Text style={[styles.reorderBtnLabel, reorderMode && { color: '#fff' }]}>Reorder</Text>
         </TouchableOpacity>
+
         <TouchableOpacity testID="hide-completed-toggle" style={[styles.hideBtn, hideCompleted && styles.hideBtnActive]} onPress={() => setHideCompleted(!hideCompleted)}>
           <Ionicons name={hideCompleted ? 'eye-off' : 'eye'} size={14} color={hideCompleted ? '#fff' : Colors.textSecondary} />
-          <Text style={[styles.hideBtnText, hideCompleted && { color: '#fff' }]}>{hideCompleted ? 'Show All' : 'Hide Done'}</Text>
+          <Text style={[styles.hideBtnText, hideCompleted && { color: '#fff' }]}>{hideCompleted ? 'Show All' : 'Hide Done Items'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -558,7 +560,7 @@ export default function ChecklistScreen() {
                   )}
                 </View>
               </TouchableOpacity>
-              {/* Photo buttons + Notes + Recurring Issue */}
+              {/* Photo buttons + Notes */}
               <View style={styles.photoActions}>
                 <TouchableOpacity testID={`photo-camera-${task.id}`} style={[styles.photoBtn, needsPhoto && styles.photoBtnUrgent]} onPress={() => takePhoto(task)}>
                   {uploading === task.id ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="camera" size={18} color={needsPhoto ? Colors.redUrgent : Colors.primary} />}
@@ -573,26 +575,6 @@ export default function ChecklistScreen() {
                   setNoteAsIssue(false);
                 }}>
                   <Ionicons name="document-text" size={18} color={Colors.accent} />
-                </TouchableOpacity>
-                <TouchableOpacity testID={`recurring-${task.id}`} style={[styles.photoBtn, task.recurring_issue && { backgroundColor: Colors.redUrgent + '15', borderColor: Colors.redUrgent + '40' }]} onPress={async () => {
-                  Alert.alert('Recurring Issue', `Mark "${task.title}" as a still-existing issue?\n\nThis flags it as a repeating problem so admins can prioritize a permanent fix.`, [
-                    { text: 'Cancel' },
-                    { text: 'Still Exists', style: 'destructive', onPress: async () => {
-                      try {
-                        const turnover = await api.get(`/turnovers/${id}`);
-                        const propId = turnover.data?.property_id;
-                        await api.post('/issues-v2/quick-report', {
-                          property_id: propId, turnover_id: id,
-                          title: `[RECURRING] ${task.title}`,
-                          description: `This is a repeating issue that still exists. Task: ${task.title} in ${task.room_name}.`,
-                          priority: 'high',
-                        });
-                        Alert.alert('Flagged', 'Marked as recurring issue. Admin notified.');
-                      } catch { Alert.alert('Error', 'Failed to report'); }
-                    }},
-                  ]);
-                }}>
-                  <Ionicons name="repeat" size={16} color={task.recurring_issue ? Colors.redUrgent : Colors.grayInactive} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -740,14 +722,14 @@ const styles = StyleSheet.create({
   typeBtnText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
   typeBtnTextActive: { color: Colors.primaryForeground },
   // Action Bar
-  actionBar: { flexDirection: 'row', gap: 6, paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm },
-  aiOrderBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: Colors.accent },
-  aiOrderText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  actionBar: { flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm },
+  aiOrderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.accent },
+  aiOrderText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  reorderBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
+  reorderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
   reorderBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  reorderBtnLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
-  hideBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
+  reorderBtnLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  hideBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
   hideBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   hideBtnText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
   // Submit
