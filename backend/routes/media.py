@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import base64
@@ -21,8 +22,8 @@ class MediaUpload(BaseModel):
 
 @router.post("/upload")
 async def upload_media(input: MediaUpload, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     # Store base64 directly in MongoDB for mobile compatibility
     file_id = str(uuid.uuid4())
     doc = {
@@ -65,8 +66,8 @@ async def get_media(file_id: str, request: Request):
 
 @router.get("/list/{owner_type}/{owner_id}")
 async def list_media(owner_type: str, owner_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     media = await db.media.find(
         {"owner_type": owner_type, "owner_id": owner_id},
         {"base64_data": 0, "_id": 0}  # Exclude base64 data and _id for listing

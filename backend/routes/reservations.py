@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 import logging
@@ -28,8 +29,8 @@ class SyncTrigger(BaseModel):
 
 @router.get("")
 async def list_reservations(request: Request, property_id: Optional[str] = None, status: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if property_id:
         query["property_id"] = property_id
@@ -52,8 +53,8 @@ async def list_reservations(request: Request, property_id: Optional[str] = None,
 
 @router.post("")
 async def create_reservation(input: ReservationSync, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         "property_id": input.property_id,
@@ -76,8 +77,8 @@ async def create_reservation(input: ReservationSync, request: Request):
 @router.post("/sync")
 async def trigger_sync(input: SyncTrigger, request: Request):
     """Mock sync from external platforms (Airbnb/Vrbo/Booking)."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     
@@ -130,8 +131,8 @@ async def trigger_sync(input: SyncTrigger, request: Request):
 
 @router.delete("/{reservation_id}")
 async def cancel_reservation(reservation_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     await db.reservations.update_one(
         {"_id": ObjectId(reservation_id)},
         {"$set": {"reservation_status": "cancelled", "updated_at": datetime.now(timezone.utc).isoformat()}}
@@ -140,8 +141,8 @@ async def cancel_reservation(reservation_id: str, request: Request):
 
 @router.get("/stats")
 async def reservation_stats(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     

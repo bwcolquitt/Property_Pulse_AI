@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -21,8 +22,8 @@ class JobPostCreate(BaseModel):
 
 @router.get("/providers")
 async def list_providers(request: Request, service_type: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {"profile_status": "active"}
     if service_type:
         query["provider_type"] = service_type
@@ -41,8 +42,8 @@ async def list_providers(request: Request, service_type: Optional[str] = None):
 
 @router.get("/providers/{provider_id}")
 async def get_provider(provider_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     provider = await db.providers.find_one({"_id": ObjectId(provider_id)})
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
@@ -54,8 +55,8 @@ async def get_provider(provider_id: str, request: Request):
 
 @router.get("/jobs")
 async def list_jobs(request: Request, status: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if status:
         query["status"] = status
@@ -64,8 +65,8 @@ async def list_jobs(request: Request, status: Optional[str] = None):
 
 @router.post("/jobs")
 async def create_job(input: JobPostCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     doc = {
         **input.dict(),
         "organization_id": None,

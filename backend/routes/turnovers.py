@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 from routes.notifications import notify_admins
@@ -26,8 +27,8 @@ class TurnoverUpdate(BaseModel):
 
 @router.get("")
 async def list_turnovers(request: Request, status: Optional[str] = None, property_id: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if status:
         query["status"] = status
@@ -74,8 +75,8 @@ async def list_turnovers(request: Request, status: Optional[str] = None, propert
 
 @router.get("/{turnover_id}")
 async def get_turnover(turnover_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     turnover = await db.turnovers.find_one({"_id": ObjectId(turnover_id)})
     if not turnover:
         raise HTTPException(status_code=404, detail="Turnover not found")
@@ -109,8 +110,8 @@ async def get_turnover(turnover_id: str, request: Request):
 
 @router.post("")
 async def create_turnover(input: TurnoverCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     doc = {
         "property_id": input.property_id,
         "reservation_id": input.reservation_id,
@@ -133,8 +134,8 @@ async def create_turnover(input: TurnoverCreate, request: Request):
 
 @router.put("/{turnover_id}")
 async def update_turnover(turnover_id: str, input: TurnoverUpdate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     update = {"updated_at": datetime.now(timezone.utc).isoformat()}
     if input.status:
         update["status"] = input.status
@@ -174,8 +175,8 @@ async def update_turnover(turnover_id: str, input: TurnoverUpdate, request: Requ
 
 @router.get("/{turnover_id}/checklist")
 async def get_turnover_checklist(turnover_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     checklist = await db.turnover_checklists.find_one({"turnover_id": turnover_id})
     if not checklist:
         raise HTTPException(status_code=404, detail="No checklist found for this turnover")
@@ -198,8 +199,8 @@ async def get_turnover_checklist(turnover_id: str, request: Request):
 
 @router.put("/checklist-items/{item_id}")
 async def update_checklist_item(item_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     body = await request.json()
     update = {"updated_at": datetime.now(timezone.utc).isoformat()}
     if "status" in body:

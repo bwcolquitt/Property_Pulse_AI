@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -34,8 +35,8 @@ class SmartNotifRequest(BaseModel):
 @router.post("/auto-schedule")
 async def ai_auto_schedule(input: AutoScheduleRequest, request: Request):
     """AI suggests optimal scheduling for turnovers and services to avoid conflicts."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc)
     end = now + timedelta(days=input.date_range_days)
 
@@ -107,8 +108,8 @@ Return JSON with:
 @router.post("/issue-patterns")
 async def detect_issue_patterns(input: IssuePatternRequest, request: Request):
     """AI analyzes historical issues to detect recurring patterns and predict future problems."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
 
     query = {}
     if input.property_id: query["property_id"] = input.property_id
@@ -142,8 +143,8 @@ Return JSON with:
 @router.post("/predictive-inventory")
 async def predictive_inventory(request: Request):
     """AI predicts inventory needs based on upcoming turnovers and usage patterns."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
 
     items = await db.inventory_items_v2.find({"active": True}).to_list(200)
     turnovers = await db.turnovers.find({"status": {"$nin": ["completed"]}}).to_list(20)
@@ -185,8 +186,8 @@ Return JSON with:
 @router.post("/turnover-debrief")
 async def ai_turnover_debrief(request: Request):
     """AI generates a turnover debrief summarizing what happened, issues found, time taken."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     body = await request.json()
     turnover_id = body.get("turnover_id")
     if not turnover_id:

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -25,8 +26,8 @@ class PropertyServiceConfig(BaseModel):
 
 @router.get("/property-services/{property_id}")
 async def get_property_services(property_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     config = await db.property_service_configs.find_one({"property_id": property_id})
     if not config:
         return {"property_id": property_id, "services": ["cleaning", "maintenance"]}
@@ -34,8 +35,8 @@ async def get_property_services(property_id: str, request: Request):
 
 @router.put("/property-services")
 async def update_property_services(input: PropertyServiceConfig, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
         raise HTTPException(status_code=403, detail="Admin access required")
     now = datetime.now(timezone.utc).isoformat()
@@ -48,15 +49,15 @@ async def update_property_services(input: PropertyServiceConfig, request: Reques
 
 @router.get("")
 async def list_settings(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     settings = await db.service_company_settings.find().to_list(50)
     return serialize_doc(settings)
 
 @router.put("/{trade_type}")
 async def update_setting(trade_type: str, input: ServiceSettingUpdate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
         raise HTTPException(status_code=403, detail="Admin access required")
     update = {"updated_at": datetime.now(timezone.utc).isoformat()}

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -30,8 +31,8 @@ class AIEstimateRequest(BaseModel):
 @router.post("/quick-report")
 async def quick_report_issue(input: QuickIssueCreate, request: Request):
     """Quick issue report from checklist - creates issue and notifies admin."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     
     location = input.location_in_property or f"{input.floor} - {input.room_name}".strip(" -")
@@ -88,8 +89,8 @@ async def quick_report_issue(input: QuickIssueCreate, request: Request):
 @router.post("/ai-estimate")
 async def ai_estimate_issue(input: AIEstimateRequest, request: Request):
     """AI-powered cost estimation using GPT-5.2 + company labor rates."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     
     issue = await db.issues.find_one({"_id": ObjectId(input.issue_id)})
     if not issue:
@@ -190,8 +191,8 @@ Return JSON with:
 @router.get("/workflow-hints")
 async def get_workflow_hints(request: Request, role: Optional[str] = None):
     """Get smart workflow ordering hints."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if role:
         query["role"] = role

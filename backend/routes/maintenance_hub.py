@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -14,8 +15,8 @@ OUTSTANDING = ["new", "not_started", "assigned", "in_progress", "awaiting_approv
 
 @router.get("/outstanding")
 async def outstanding_issues(request: Request, priority: Optional[str] = None, property_id: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {"status": {"$in": OUTSTANDING}}
     if priority:
         query["priority"] = priority
@@ -36,8 +37,8 @@ async def outstanding_issues(request: Request, priority: Optional[str] = None, p
 
 @router.get("/stats")
 async def maintenance_stats(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     total_open = await db.issues.count_documents({"status": {"$in": OUTSTANDING}})
     urgent = await db.issues.count_documents({"status": {"$in": OUTSTANDING}, "priority": "urgent"})
     high = await db.issues.count_documents({"status": {"$in": OUTSTANDING}, "priority": "high"})
@@ -48,8 +49,8 @@ async def maintenance_stats(request: Request):
 
 @router.get("/{issue_id}")
 async def get_issue_detail(issue_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     issue = await db.issues.find_one({"_id": ObjectId(issue_id)})
     if not issue: raise HTTPException(404, "Issue not found")
     doc = serialize_doc(issue)

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone, timedelta
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 import os
@@ -42,8 +43,8 @@ class PredictiveReadinessRequest(BaseModel):
 
 @router.post("/generate-checklist")
 async def generate_checklist(input: ChecklistGenRequest, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     try:
         chat = get_llm()
         prompt = f"""Generate a detailed cleaning checklist for a {input.property_type} with {input.bedrooms} bedrooms and {input.bathrooms} bathrooms.
@@ -84,8 +85,8 @@ Include 15-25 tasks covering all rooms. Focus on vacation rental turnover specif
 
 @router.post("/classify-severity")
 async def classify_severity(input: SeverityRequest, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     try:
         chat = get_llm()
         prompt = f"""Classify the severity of this maintenance issue for a short-term rental property.
@@ -122,8 +123,8 @@ Return JSON with:
 
 @router.post("/risk-score")
 async def calculate_risk_score(input: RiskScoreRequest, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     from bson import ObjectId
     # Gather property data
     prop = await db.properties.find_one({"_id": ObjectId(input.property_id)})
@@ -175,8 +176,8 @@ Return JSON with:
 
 @router.post("/predictive-readiness")
 async def predictive_readiness(input: PredictiveReadinessRequest, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     outstanding = ["new", "not_started", "assigned", "in_progress", "awaiting_approval", "awaiting_parts", "scheduled", "blocked", "reopened"]
     query = {"status": "active"} if not input.property_id else {"_id": __import__("bson").ObjectId(input.property_id)}
     properties = await db.properties.find(query).to_list(50)

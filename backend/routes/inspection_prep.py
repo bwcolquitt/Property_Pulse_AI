@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import os, logging
@@ -39,8 +40,8 @@ DEFAULT_INSPECTION_ITEMS = [
 
 @router.get("/checklist/{property_id}")
 async def get_inspection_checklist(property_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     saved = await db.inspection_checklists.find_one({"property_id": property_id})
     if saved:
         return serialize_doc(saved)
@@ -52,8 +53,8 @@ class InspectionUpdate(BaseModel):
 
 @router.put("/checklist/{property_id}")
 async def update_inspection_checklist(property_id: str, input: InspectionUpdate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     checked_count = sum(1 for i in input.items if i.get("checked"))
     total = len(input.items)
@@ -67,8 +68,8 @@ async def update_inspection_checklist(property_id: str, input: InspectionUpdate,
 @router.post("/ai-recommendations/{property_id}")
 async def ai_inspection_recommendations(property_id: str, request: Request):
     """AI reviews the inspection checklist and gives recommendations."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     saved = await db.inspection_checklists.find_one({"property_id": property_id})
     items = (saved or {}).get("items", DEFAULT_INSPECTION_ITEMS)
     unchecked = [i for i in items if not i.get("checked")]

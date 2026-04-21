@@ -3,6 +3,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import qrcode
@@ -54,8 +55,8 @@ def generate_qr_base64(data: str, inverted: bool = True) -> str:
 
 @router.get("/items")
 async def list_inventory_items(request: Request, property_id: Optional[str] = None, category: Optional[str] = None, low_stock: Optional[bool] = None, location: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {"active": True}
     if property_id:
         query["property_id"] = property_id
@@ -81,8 +82,8 @@ async def list_inventory_items(request: Request, property_id: Optional[str] = No
 
 @router.get("/items/{item_id}")
 async def get_item(item_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     item = await db.inventory_items_v2.find_one({"_id": ObjectId(item_id)})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -94,8 +95,8 @@ async def get_item(item_id: str, request: Request):
 
 @router.post("/items")
 async def create_item(input: InventoryItemCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     # Only admins/managers can create items
     if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
         raise HTTPException(status_code=403, detail="Only admins can create inventory items")
@@ -133,8 +134,8 @@ async def get_item_qr(item_id: str, request: Request):
 
 @router.post("/adjust")
 async def adjust_inventory(input: InventoryAdjust, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     item = await db.inventory_items_v2.find_one({"_id": ObjectId(input.item_id)})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -164,8 +165,8 @@ async def adjust_inventory(input: InventoryAdjust, request: Request):
 @router.post("/scan")
 async def scan_qr_lookup(request: Request):
     """Look up an item by QR code data (scanned or external ID)."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     body = await request.json()
     qr_data = body.get("qr_data", "")
     # Try to parse as JSON (app-generated QR)
@@ -189,8 +190,8 @@ async def scan_qr_lookup(request: Request):
 
 @router.put("/items/{item_id}/associate-qr")
 async def associate_external_qr(item_id: str, input: QRAssociate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
         raise HTTPException(status_code=403, detail="Only admins can associate QR codes")
     await db.inventory_items_v2.update_one({"_id": ObjectId(item_id)}, {"$set": {"qr_code_external": input.external_qr_code, "updated_at": datetime.now(timezone.utc).isoformat()}})
@@ -198,8 +199,8 @@ async def associate_external_qr(item_id: str, input: QRAssociate, request: Reque
 
 @router.get("/locations")
 async def list_locations(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     items = await db.inventory_items_v2.find({"active": True}).to_list(500)
     locations = {}
     for item in items:
@@ -213,8 +214,8 @@ async def list_locations(request: Request):
 
 @router.get("/categories")
 async def list_categories(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     pipeline = [{"$match": {"active": True}}, {"$group": {"_id": "$category", "count": {"$sum": 1}}}]
     result = await db.inventory_items_v2.aggregate(pipeline).to_list(50)
     return [{"category": r["_id"], "count": r["count"]} for r in result]
@@ -226,8 +227,8 @@ class UpdateReorderUrl(BaseModel):
 
 @router.put("/items/{item_id}/reorder-settings")
 async def update_reorder_settings(item_id: str, input: UpdateReorderUrl, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     updates = {"updated_at": datetime.now(timezone.utc).isoformat()}
     if input.reorder_url is not None:
         updates["reorder_url"] = input.reorder_url

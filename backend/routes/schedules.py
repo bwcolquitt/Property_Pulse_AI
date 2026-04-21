@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 
@@ -28,8 +29,8 @@ class AvailabilityUpdate(BaseModel):
 
 @router.get("/recurring")
 async def list_recurring(request: Request, property_id: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {"active": True}
     if property_id: query["property_id"] = property_id
     schedules = await db.recurring_schedules.find(query).to_list(100)
@@ -53,8 +54,8 @@ async def list_recurring(request: Request, property_id: Optional[str] = None):
 
 @router.post("/recurring")
 async def create_recurring(input: RecurringScheduleCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         **input.dict(),
@@ -70,15 +71,15 @@ async def create_recurring(input: RecurringScheduleCreate, request: Request):
 
 @router.delete("/recurring/{schedule_id}")
 async def delete_recurring(schedule_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     await db.recurring_schedules.update_one({"_id": ObjectId(schedule_id)}, {"$set": {"active": False}})
     return {"success": True}
 
 @router.get("/provider-availability/{provider_id}")
 async def get_availability(provider_id: str, request: Request, month: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {"provider_id": provider_id}
     if month: query["date"] = {"$regex": f"^{month}"}
     avail = await db.provider_availability.find(query).sort("date", 1).to_list(100)
@@ -86,8 +87,8 @@ async def get_availability(provider_id: str, request: Request, month: Optional[s
 
 @router.put("/provider-availability/{provider_id}")
 async def update_availability(provider_id: str, input: AvailabilityUpdate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     await db.provider_availability.update_one(
         {"provider_id": provider_id, "date": input.date},
@@ -99,8 +100,8 @@ async def update_availability(provider_id: str, input: AvailabilityUpdate, reque
 @router.get("/provider-availability-bulk")
 async def bulk_availability(request: Request, month: Optional[str] = None):
     """Get availability for all providers for calendar view."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     providers = await db.providers.find({"profile_status": "active"}).to_list(50)
     result = []
     for p in providers:

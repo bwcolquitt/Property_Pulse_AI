@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -10,8 +11,8 @@ def get_db(request: Request):
 
 @router.get("")
 async def list_notifications(request: Request, unread: bool = False):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {"user_id": user["id"]}
     if unread:
         query["read_at"] = None
@@ -20,15 +21,15 @@ async def list_notifications(request: Request, unread: bool = False):
 
 @router.get("/count")
 async def unread_count(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     count = await db.notifications.count_documents({"user_id": user["id"], "read_at": None})
     return {"unread_count": count}
 
 @router.put("/{notification_id}/read")
 async def mark_read(notification_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     await db.notifications.update_one(
         {"_id": ObjectId(notification_id), "user_id": user["id"]},
         {"$set": {"read_at": datetime.now(timezone.utc).isoformat()}}
@@ -37,8 +38,8 @@ async def mark_read(notification_id: str, request: Request):
 
 @router.put("/read-all")
 async def mark_all_read(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     await db.notifications.update_many(
         {"user_id": user["id"], "read_at": None},
         {"$set": {"read_at": datetime.now(timezone.utc).isoformat()}}

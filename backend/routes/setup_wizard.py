@@ -1,6 +1,7 @@
 """Setup Wizard Status - helps admin know what's configured and what's missing."""
 from fastapi import APIRouter, Request, HTTPException
 from helpers import get_current_user
+from tenant_db import get_tenant_db
 
 router = APIRouter(prefix="/api/setup", tags=["setup"])
 
@@ -9,8 +10,8 @@ def get_db(request: Request):
 
 @router.get("/status")
 async def setup_status(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
 

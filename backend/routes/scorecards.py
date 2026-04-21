@@ -5,6 +5,7 @@ notes written, issues reported, average quality rating.
 """
 from fastapi import APIRouter, Request, HTTPException
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 
@@ -16,8 +17,8 @@ def get_db(request: Request):
 @router.get("/cleaners")
 async def cleaner_scorecards(request: Request, days: int = 30):
     """Return per-cleaner performance metrics for the last N days."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
 

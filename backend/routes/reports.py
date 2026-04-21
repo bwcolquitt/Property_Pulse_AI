@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import io, csv
@@ -14,8 +15,8 @@ OUTSTANDING_STATUSES = ["new", "not_started", "assigned", "in_progress", "awaiti
 
 @router.get("")
 async def get_report_types(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     return [
         {"id": "outstanding_maintenance", "name": "Outstanding Maintenance", "description": "All open maintenance issues with priority breakdown"},
         {"id": "guest_readiness", "name": "Guest Readiness", "description": "Property readiness for upcoming guests"},
@@ -28,15 +29,15 @@ async def get_report_types(request: Request):
 
 @router.get("/outstanding-maintenance")
 async def outstanding_maintenance_report(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     issues = await db.issues.find({"status": {"$in": OUTSTANDING_STATUSES}}).to_list(500)
     return serialize_doc(issues)
 
 @router.get("/guest-readiness")
 async def guest_readiness_report(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     properties = await db.properties.find({"status": "active"}).to_list(100)
     result = []
     for p in properties:
@@ -54,15 +55,15 @@ async def guest_readiness_report(request: Request):
 
 @router.get("/turnover-completion")
 async def turnover_completion_report(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     turnovers = await db.turnovers.find().sort("due_at", -1).to_list(200)
     return serialize_doc(turnovers)
 
 @router.get("/team")
 async def team_report(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     users = await db.users.find({}, {"password_hash": 0}).to_list(100)
     result = []
     for u in users:
@@ -75,8 +76,8 @@ async def team_report(request: Request):
 
 @router.get("/cleaner-scorecard")
 async def cleaner_scorecard_report(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     cleaners = await db.users.find({"role": {"$in": ["cleaner", "maintenance_technician"]}}, {"password_hash": 0}).to_list(50)
     result = []
     for c in cleaners:
@@ -94,8 +95,8 @@ async def cleaner_scorecard_report(request: Request):
 
 @router.get("/vendor-performance")
 async def vendor_performance_report(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     providers = await db.providers.find({"profile_status": "active"}).to_list(50)
     result = []
     for p in providers:
@@ -110,8 +111,8 @@ async def vendor_performance_report(request: Request):
 
 @router.get("/issue-trends")
 async def issue_trends_report(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     properties = await db.properties.find({"status": "active"}).to_list(100)
     result = []
     for p in properties:
@@ -134,8 +135,8 @@ async def issue_trends_report(request: Request):
 
 @router.get("/financial-summary")
 async def financial_summary_report(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     issues = await db.issues.find({}).to_list(500)
     total_estimated = sum(i.get("estimate_amount", 0) or 0 for i in issues)
     approved_costs = sum(i.get("estimate_amount", 0) or 0 for i in issues if i.get("estimate_status") == "approved")
@@ -155,8 +156,8 @@ async def financial_summary_report(request: Request):
 
 @router.get("/export/{report_id}")
 async def export_report_csv(report_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     
     output = io.StringIO()
     writer = csv.writer(output)

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import os, logging
@@ -25,8 +26,8 @@ MARKUP_RATE = 0.25  # 25% service fee
 
 @router.post("")
 async def create_purchase(input: PurchaseCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     subtotal = input.unit_cost * input.quantity
     service_fee = round(subtotal * MARKUP_RATE, 2)
@@ -56,8 +57,8 @@ async def create_purchase(input: PurchaseCreate, request: Request):
 
 @router.get("")
 async def list_purchases(request: Request, status: Optional[str] = None, property_id: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if status: query["status"] = status
     if property_id: query["property_id"] = property_id
@@ -78,8 +79,8 @@ class PurchaseAction(BaseModel):
 
 @router.put("/{purchase_id}")
 async def action_purchase(purchase_id: str, input: PurchaseAction, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     updates = {"status": "approved" if input.action == "approve" else "rejected", "actioned_by": user["id"], "actioned_at": now}
     await db.onsite_purchases.update_one({"_id": ObjectId(purchase_id)}, {"$set": updates})

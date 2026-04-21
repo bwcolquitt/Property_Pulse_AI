@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import logging
@@ -34,8 +35,8 @@ class BidAction(BaseModel):
 
 @router.get("")
 async def list_jobs(request: Request, status: Optional[str] = None, job_type: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if status:
         query["status"] = status
@@ -60,8 +61,8 @@ async def list_jobs(request: Request, status: Optional[str] = None, job_type: Op
 
 @router.post("")
 async def create_job(input: JobCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         "property_id": input.property_id,
@@ -88,8 +89,8 @@ async def create_job(input: JobCreate, request: Request):
 
 @router.get("/{job_id}")
 async def get_job(job_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     job = await db.job_posts.find_one({"_id": ObjectId(job_id)})
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -119,8 +120,8 @@ async def get_job(job_id: str, request: Request):
 
 @router.post("/{job_id}/bids")
 async def submit_bid(job_id: str, input: BidCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     # Find provider by user_id
     provider = await db.providers.find_one({"user_id": user["id"]})
     now = datetime.now(timezone.utc).isoformat()
@@ -145,8 +146,8 @@ async def submit_bid(job_id: str, input: BidCreate, request: Request):
 
 @router.put("/{job_id}/bids/{bid_id}")
 async def action_bid(job_id: str, bid_id: str, input: BidAction, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     
     if input.action == "accept":
@@ -172,8 +173,8 @@ async def action_bid(job_id: str, bid_id: str, input: BidAction, request: Reques
 
 @router.put("/{job_id}/close")
 async def close_job(job_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     await db.job_posts.update_one(
         {"_id": ObjectId(job_id)},
         {"$set": {"status": "closed", "updated_at": datetime.now(timezone.utc).isoformat()}}

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -20,8 +21,8 @@ class QuoteAction(BaseModel):
 
 @router.get("/{job_post_id}")
 async def list_quotes(job_post_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     quotes = await db.quotes.find({"job_post_id": job_post_id}).sort("created_at", -1).to_list(50)
     result = []
     for q in quotes:
@@ -39,8 +40,8 @@ async def list_quotes(job_post_id: str, request: Request):
 
 @router.post("")
 async def submit_quote(input: QuoteCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     # Find provider for this user
     provider = await db.providers.find_one({"user_id": user["id"]})
     provider_id = str(provider["_id"]) if provider else None
@@ -60,8 +61,8 @@ async def submit_quote(input: QuoteCreate, request: Request):
 
 @router.put("/{quote_id}")
 async def action_quote(quote_id: str, input: QuoteAction, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     if input.action == "accept":
         await db.quotes.update_one({"_id": ObjectId(quote_id)}, {"$set": {"status": "accepted", "accepted_at": now}})

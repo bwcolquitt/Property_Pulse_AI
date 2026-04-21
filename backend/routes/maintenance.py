@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -50,8 +51,8 @@ async def list_issues(
     blocks_check_in: Optional[bool] = None,
     outstanding: Optional[bool] = True,
 ):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if status:
         query["status"] = status
@@ -100,8 +101,8 @@ async def list_issues(
 
 @router.get("/{issue_id}")
 async def get_issue(issue_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     issue = await db.issues.find_one({"_id": ObjectId(issue_id)})
     if not issue:
         raise HTTPException(status_code=404, detail="Issue not found")
@@ -136,8 +137,8 @@ async def get_issue(issue_id: str, request: Request):
 
 @router.post("")
 async def create_issue(input: IssueCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         **input.dict(),
@@ -173,8 +174,8 @@ async def create_issue(input: IssueCreate, request: Request):
 
 @router.put("/{issue_id}")
 async def update_issue(issue_id: str, input: IssueUpdate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     existing = await db.issues.find_one({"_id": ObjectId(issue_id)})
     if not existing:
         raise HTTPException(status_code=404, detail="Issue not found")
@@ -203,8 +204,8 @@ async def update_issue(issue_id: str, input: IssueUpdate, request: Request):
 
 @router.post("/{issue_id}/comments")
 async def add_comment(issue_id: str, input: CommentCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     doc = {
         "issue_id": issue_id,
         "user_id": user["id"],

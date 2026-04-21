@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -21,8 +22,8 @@ class InspectionItemUpdate(BaseModel):
 
 @router.get("")
 async def list_inspections(request: Request, status: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if status:
         query["status"] = status
@@ -54,8 +55,8 @@ async def list_inspections(request: Request, status: Optional[str] = None):
 
 @router.get("/{inspection_id}")
 async def get_inspection(inspection_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     insp = await db.inspections.find_one({"_id": ObjectId(inspection_id)})
     if not insp:
         raise HTTPException(status_code=404, detail="Inspection not found")
@@ -78,8 +79,8 @@ async def get_inspection(inspection_id: str, request: Request):
 
 @router.post("")
 async def create_inspection(input: InspectionCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         "property_id": input.property_id,
@@ -125,8 +126,8 @@ async def create_inspection(input: InspectionCreate, request: Request):
 
 @router.put("/{inspection_id}/items/{item_id}")
 async def update_inspection_item(inspection_id: str, item_id: str, input: InspectionItemUpdate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     update = {
         "status": input.status,
@@ -156,8 +157,8 @@ async def update_inspection_item(inspection_id: str, item_id: str, input: Inspec
 
 @router.post("/{inspection_id}/reclean")
 async def request_reclean(inspection_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     insp = await db.inspections.find_one({"_id": ObjectId(inspection_id)})
     if not insp:
         raise HTTPException(status_code=404, detail="Inspection not found")

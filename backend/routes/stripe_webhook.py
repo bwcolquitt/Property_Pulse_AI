@@ -58,9 +58,30 @@ async def stripe_webhook(request: Request, stripe_signature: Optional[str] = Hea
             sub_id = data.get("id")
             status = data.get("status", "")  # trialing | active | past_due | canceled | unpaid
             customer_id = data.get("customer")
+            # Detect plan tier change via price_id (items.data[0].price.id)
+            plan_update = {}
+            try:
+                items = (data.get("items") or {}).get("data") or []
+                if items:
+                    price_id = ((items[0].get("price") or {}).get("id")) or ""
+                    # Map price_id back to our plan keys
+                    env_map = {
+                        os.environ.get("STRIPE_PRICE_STARTER", ""): "starter",
+                        os.environ.get("STRIPE_PRICE_PRO", ""): "pro",
+                        os.environ.get("STRIPE_PRICE_ENTERPRISE", ""): "enterprise",
+                    }
+                    env_map.pop("", None)  # drop empty keys
+                    if price_id in env_map:
+                        plan_update["plan"] = env_map[price_id]
+            except Exception:
+                pass
+            update = {"status": status, "stripe_subscription_id": sub_id, "updated_at": now, **plan_update}
+            # Trial → Active conversion: stamp conversion time
+            if status == "active":
+                update["trial_converted_at"] = now
             await db.tenants.update_one(
                 {"$or": [{"stripe_subscription_id": sub_id}, {"stripe_customer_id": customer_id}]},
-                {"$set": {"status": status, "stripe_subscription_id": sub_id, "updated_at": now}},
+                {"$set": update},
             )
 
         elif event_type == "customer.subscription.deleted":

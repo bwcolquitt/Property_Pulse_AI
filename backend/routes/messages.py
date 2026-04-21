@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -16,8 +17,8 @@ class MessageCreate(BaseModel):
 
 @router.get("/conversations")
 async def list_conversations(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     # Get all conversations where user is a participant
     participations = await db.conversation_participants.find({"user_id": user["id"]}).to_list(100)
     conv_ids = [p["conversation_id"] for p in participations]
@@ -51,8 +52,8 @@ async def list_conversations(request: Request):
 
 @router.get("/conversations/{conversation_id}")
 async def get_conversation_messages(conversation_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     messages = await db.messages.find({"conversation_id": conversation_id}).sort("created_at", 1).to_list(200)
     result = []
     for m in messages:
@@ -70,8 +71,8 @@ async def get_conversation_messages(conversation_id: str, request: Request):
 
 @router.post("/conversations/{conversation_id}")
 async def send_message(conversation_id: str, input: MessageCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     doc = {
         "conversation_id": conversation_id,
         "sender_user_id": user["id"],

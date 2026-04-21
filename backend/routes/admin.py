@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 
@@ -30,8 +31,8 @@ class TurnoverServiceAssign(BaseModel):
 @router.get("/review-queue")
 async def get_review_queue(request: Request):
     """Get all issues with AI estimates awaiting admin review."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
         raise HTTPException(status_code=403, detail="Admin access required")
     
@@ -52,8 +53,8 @@ async def get_review_queue(request: Request):
 @router.get("/dashboard-stats")
 async def admin_dashboard_stats(request: Request):
     """Extended admin dashboard stats."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
         raise HTTPException(status_code=403, detail="Admin access required")
     
@@ -96,8 +97,8 @@ async def admin_dashboard_stats(request: Request):
 @router.put("/estimate/{issue_id}")
 async def action_estimate(issue_id: str, input: EstimateAction, request: Request):
     """Approve, reject, or revise an AI estimate."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
         raise HTTPException(status_code=403, detail="Admin access required")
     
@@ -136,8 +137,8 @@ async def action_estimate(issue_id: str, input: EstimateAction, request: Request
 @router.post("/reorder-checklist")
 async def reorder_checklist(input: ReorderItems, request: Request):
     """Reorder checklist items for a turnover."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     
     for i, item_id in enumerate(input.item_order):
         await db.turnover_checklist_items.update_one(
@@ -149,8 +150,8 @@ async def reorder_checklist(input: ReorderItems, request: Request):
 @router.get("/calendar")
 async def calendar_turnovers(request: Request, month: Optional[str] = None):
     """Get turnovers for calendar view with service assignments."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     
     turnovers = await db.turnovers.find().sort("due_at", 1).to_list(200)
     result = []
@@ -182,8 +183,8 @@ async def calendar_turnovers(request: Request, month: Optional[str] = None):
 @router.post("/assign-service")
 async def assign_service_to_turnover(input: TurnoverServiceAssign, request: Request):
     """Assign a service company to a turnover."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") not in ["property_manager", "super_admin", "operations_manager"]:
         raise HTTPException(status_code=403, detail="Admin access required")
     

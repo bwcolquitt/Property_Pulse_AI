@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
@@ -9,8 +10,8 @@ def get_db(request: Request):
 
 @router.get("/stats")
 async def get_dashboard_stats(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today.replace(hour=23, minute=59, second=59)
 

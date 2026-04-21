@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import logging
@@ -32,8 +33,8 @@ class NewGuestMessage(BaseModel):
 @router.post("")
 async def create_guest_message(input: NewGuestMessage, request: Request):
     """Guest sends a message to the host. Does NOT directly create an issue."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
 
     prop = None
@@ -88,8 +89,8 @@ async def create_guest_message(input: NewGuestMessage, request: Request):
 # ===== List (for Host) =====
 @router.get("")
 async def list_guest_messages(request: Request, status: Optional[str] = None, property_id: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Host only")
     q = {}
@@ -102,8 +103,8 @@ async def list_guest_messages(request: Request, status: Optional[str] = None, pr
 
 @router.get("/stats")
 async def guest_messages_stats(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Host only")
     pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
@@ -124,8 +125,8 @@ class ReplyInput(BaseModel):
 
 @router.put("/{msg_id}/reply")
 async def reply_to_guest(msg_id: str, input: ReplyInput, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Host only")
     now = datetime.now(timezone.utc).isoformat()
@@ -143,8 +144,8 @@ class ConvertToIssueInput(BaseModel):
 @router.put("/{msg_id}/convert-to-issue")
 async def convert_to_issue(msg_id: str, input: ConvertToIssueInput, request: Request):
     """Host triages a guest message into a real maintenance issue."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Host only")
 
@@ -177,8 +178,8 @@ async def convert_to_issue(msg_id: str, input: ConvertToIssueInput, request: Req
 
 @router.put("/{msg_id}/resolve")
 async def resolve_guest_message(msg_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Host only")
     await db.guest_messages.update_one(
@@ -190,7 +191,7 @@ async def resolve_guest_message(msg_id: str, request: Request):
 @router.get("/thread/{reservation_id}")
 async def get_thread_for_guest(reservation_id: str, request: Request):
     """Guest views their own thread with the host."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     msgs = await db.guest_messages.find({"reservation_id": reservation_id}).sort("created_at", 1).to_list(200)
     return [serialize_doc(m) for m in msgs]

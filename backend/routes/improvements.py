@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -21,8 +22,8 @@ class ImprovementCreate(BaseModel):
 
 @router.get("")
 async def list_improvements(request: Request, property_id: Optional[str] = None, status: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if property_id: query["property_id"] = property_id
     if status: query["status"] = status
@@ -40,8 +41,8 @@ async def list_improvements(request: Request, property_id: Optional[str] = None,
 
 @router.post("")
 async def create_improvement(input: ImprovementCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         **input.dict(),
@@ -62,8 +63,8 @@ class ImprovementAction(BaseModel):
 
 @router.put("/{improvement_id}")
 async def action_improvement(improvement_id: str, input: ImprovementAction, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     status_map = {"approve": "approved", "dismiss": "dismissed", "complete": "completed"}
     await db.improvements.update_one({"_id": ObjectId(improvement_id)}, {"$set": {"status": status_map.get(input.action, "suggested"), "actioned_at": datetime.now(timezone.utc).isoformat()}})
     return {"success": True}

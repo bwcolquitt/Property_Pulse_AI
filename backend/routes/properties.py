@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -26,8 +27,8 @@ class PropertyCreate(BaseModel):
 
 @router.get("")
 async def list_properties(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     props = await db.properties.find().to_list(100)
     # Enrich with counts
     result = []
@@ -43,8 +44,8 @@ async def list_properties(request: Request):
 
 @router.get("/{property_id}")
 async def get_property(property_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     prop = await db.properties.find_one({"_id": ObjectId(property_id)})
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
@@ -58,8 +59,8 @@ async def get_property(property_id: str, request: Request):
 
 @router.post("")
 async def create_property(input: PropertyCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     doc = {
         **input.dict(),
         "status": "active",

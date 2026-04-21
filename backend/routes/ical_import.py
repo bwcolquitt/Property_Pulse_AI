@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import httpx
@@ -27,8 +28,8 @@ class IcalFeedInput(BaseModel):
 
 @router.get("/feeds")
 async def list_feeds(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     feeds = await db.ical_feeds.find({}).to_list(500)
@@ -47,8 +48,8 @@ async def list_feeds(request: Request):
 
 @router.post("/feeds")
 async def add_feed(input: IcalFeedInput, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     now = datetime.now(timezone.utc).isoformat()
@@ -65,8 +66,8 @@ async def add_feed(input: IcalFeedInput, request: Request):
 
 @router.delete("/feeds/{feed_id}")
 async def delete_feed(feed_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     await db.ical_feeds.delete_one({"_id": ObjectId(feed_id)})
@@ -75,8 +76,8 @@ async def delete_feed(feed_id: str, request: Request):
 @router.post("/feeds/{feed_id}/sync")
 async def sync_feed(feed_id: str, request: Request):
     """Fetch iCal URL, parse VEVENT entries, upsert into reservations collection."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     feed = await db.ical_feeds.find_one({"_id": ObjectId(feed_id)})
@@ -186,8 +187,8 @@ async def sync_feed(feed_id: str, request: Request):
 @router.post("/sync-all")
 async def sync_all_feeds(request: Request):
     """Sync all enabled feeds (for scheduled/cron use)."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     feeds = await db.ical_feeds.find({"enabled": True}).to_list(500)

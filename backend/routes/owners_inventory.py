@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import secrets
@@ -28,8 +29,8 @@ class StorageBoxInput(BaseModel):
 
 @router.post("")
 async def create_storage_box(input: StorageBoxInput, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     now = datetime.now(timezone.utc).isoformat()
@@ -47,8 +48,8 @@ async def create_storage_box(input: StorageBoxInput, request: Request):
 
 @router.get("")
 async def list_storage_boxes(request: Request, property_id: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     q = {"active": True}
@@ -71,8 +72,8 @@ async def list_storage_boxes(request: Request, property_id: Optional[str] = None
 
 @router.get("/qr/{qr_code}")
 async def scan_qr(qr_code: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     box = await db.owners_inventory.find_one({"qr_code": qr_code, "active": True})
@@ -89,8 +90,8 @@ class UpdateBox(BaseModel):
 
 @router.put("/{box_id}")
 async def update_box(box_id: str, input: UpdateBox, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     updates = {k: v for k, v in input.dict(exclude_unset=True).items() if v is not None}
@@ -100,8 +101,8 @@ async def update_box(box_id: str, input: UpdateBox, request: Request):
 
 @router.delete("/{box_id}")
 async def delete_box(box_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     await db.owners_inventory.update_one({"_id": ObjectId(box_id)}, {"$set": {"active": False}})

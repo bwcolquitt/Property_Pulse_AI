@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -32,8 +33,8 @@ async def get_guest_inventory(property_id: str, request: Request):
 
 @router.post("")
 async def add_guest_item(input: GuestItem, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {**input.dict(), "active": True, "created_by": user["id"], "created_at": now}
     result = await db.guest_inventory.insert_one(doc)
@@ -43,7 +44,7 @@ async def add_guest_item(input: GuestItem, request: Request):
 
 @router.delete("/{item_id}")
 async def remove_guest_item(item_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     await db.guest_inventory.update_one({"_id": ObjectId(item_id)}, {"$set": {"active": False}})
     return {"success": True}

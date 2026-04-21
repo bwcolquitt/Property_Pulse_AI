@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -22,8 +23,8 @@ class SupplyRequestAction(BaseModel):
 
 @router.get("")
 async def list_requests(request: Request, status: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if status:
         query["status"] = status
@@ -42,8 +43,8 @@ async def list_requests(request: Request, status: Optional[str] = None):
 
 @router.post("")
 async def create_request(input: SupplyRequestCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     total_items = sum(i.get("quantity", 1) for i in input.items)
     doc = {
@@ -67,8 +68,8 @@ async def create_request(input: SupplyRequestCreate, request: Request):
 
 @router.put("/{request_id}")
 async def action_request(request_id: str, input: SupplyRequestAction, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     
     updates = {"updated_at": now}
@@ -101,8 +102,8 @@ async def action_request(request_id: str, input: SupplyRequestAction, request: R
 
 @router.get("/stats")
 async def request_stats(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     pending = await db.supply_requests.count_documents({"status": "pending"})
     approved = await db.supply_requests.count_documents({"status": "approved"})
     fulfilled = await db.supply_requests.count_documents({"status": "fulfilled"})

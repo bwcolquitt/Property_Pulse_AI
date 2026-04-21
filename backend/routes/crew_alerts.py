@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -18,8 +19,8 @@ class GuestPresentAlert(BaseModel):
 @router.post("/guest-present")
 async def report_guest_present(input: GuestPresentAlert, request: Request):
     """Service crew reports guests still in property. Creates alert + issue."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     prop = await db.properties.find_one({"_id": ObjectId(input.property_id)})
     prop_name = prop.get("nickname", prop.get("name", "")) if prop else "Unknown"
@@ -53,14 +54,14 @@ async def report_guest_present(input: GuestPresentAlert, request: Request):
 
 @router.get("")
 async def list_alerts(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     alerts = await db.crew_alerts.find({"status": "active"}).sort("created_at", -1).to_list(50)
     return [serialize_doc(a) for a in alerts]
 
 @router.put("/{alert_id}/resolve")
 async def resolve_alert(alert_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     await db.crew_alerts.update_one({"_id": ObjectId(alert_id)}, {"$set": {"status": "resolved", "resolved_at": datetime.now(timezone.utc).isoformat()}})
     return {"success": True}

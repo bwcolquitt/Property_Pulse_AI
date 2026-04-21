@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -29,8 +30,8 @@ class ServiceNotes(BaseModel):
 
 @router.get("/{property_id}")
 async def get_property_notes(property_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     notes = await db.property_service_notes.find_one({"property_id": property_id})
     if not notes:
         return {"property_id": property_id}
@@ -38,8 +39,8 @@ async def get_property_notes(property_id: str, request: Request):
 
 @router.put("/{property_id}")
 async def update_property_notes(property_id: str, input: ServiceNotes, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = input.dict()
     doc["updated_by"] = user["id"]

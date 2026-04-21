@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import math
@@ -34,8 +35,8 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
 @router.post("/update-location")
 async def update_location(input: LocationUpdate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     await db.user_locations.update_one(
         {"user_id": user["id"]},
@@ -59,8 +60,8 @@ async def update_location(input: LocationUpdate, request: Request):
 
 @router.post("/check")
 async def check_geofence(input: GeofenceCheck, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     prop = await db.properties.find_one({"_id": ObjectId(input.property_id)})
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
@@ -73,8 +74,8 @@ async def check_geofence(input: GeofenceCheck, request: Request):
 @router.post("/auto-complete")
 async def auto_complete_on_exit(input: LocationUpdate, request: Request):
     """Auto-complete checklist when user leaves geofence."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if not input.turnover_id:
         return {"auto_completed": False, "reason": "No active turnover"}
     turnover = await db.turnovers.find_one({"_id": ObjectId(input.turnover_id)})

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 import logging
 
@@ -46,8 +47,8 @@ async def list_providers():
 
 @router.get("/connections")
 async def list_connections(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     conns = await db.pms_connections.find({}).to_list(100)
@@ -73,8 +74,8 @@ class ConnectInput(BaseModel):
 
 @router.post("/connect")
 async def connect_pms(input: ConnectInput, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     now = datetime.now(timezone.utc).isoformat()
@@ -87,8 +88,8 @@ async def connect_pms(input: ConnectInput, request: Request):
 
 @router.delete("/connect/{provider}")
 async def disconnect_pms(provider: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
     await db.pms_connections.delete_one({"provider": provider})
@@ -100,8 +101,8 @@ async def sync_reservations(provider: str, request: Request):
     For MVP, this generates 5 mock reservations tagged with the provider.
     Real adapter should call the PMS API and write into `reservations` collection.
     """
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") == "guest":
         raise HTTPException(403, "Admin only")
 

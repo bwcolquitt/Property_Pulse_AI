@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -33,8 +34,8 @@ class AssetUpdate(BaseModel):
 
 @router.get("")
 async def list_assets(request: Request, property_id: Optional[str] = None, category: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {"active": True}
     if property_id:
         query["property_id"] = property_id
@@ -68,8 +69,8 @@ async def list_assets(request: Request, property_id: Optional[str] = None, categ
 
 @router.post("")
 async def create_asset(input: AssetCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         **input.dict(),
@@ -86,8 +87,8 @@ async def create_asset(input: AssetCreate, request: Request):
 
 @router.put("/{asset_id}")
 async def update_asset(asset_id: str, input: AssetUpdate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     updates = {k: v for k, v in input.dict().items() if v is not None}
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.property_assets.update_one({"_id": ObjectId(asset_id)}, {"$set": updates})
@@ -96,15 +97,15 @@ async def update_asset(asset_id: str, input: AssetUpdate, request: Request):
 
 @router.delete("/{asset_id}")
 async def delete_asset(asset_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     await db.property_assets.update_one({"_id": ObjectId(asset_id)}, {"$set": {"active": False}})
     return {"success": True}
 
 @router.get("/expiring-warranties")
 async def expiring_warranties(request: Request, days: int = 30):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc)
     cutoff = (now + __import__('datetime').timedelta(days=days)).isoformat()
     assets = await db.property_assets.find({

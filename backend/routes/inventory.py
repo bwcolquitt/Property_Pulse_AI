@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -18,8 +19,8 @@ class SupplyRequestCreate(BaseModel):
 
 @router.get("")
 async def list_inventory(request: Request, property_id: Optional[str] = None, low_stock: Optional[bool] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {"active": True}
     if property_id:
         query["property_id"] = property_id
@@ -46,8 +47,8 @@ async def list_inventory(request: Request, property_id: Optional[str] = None, lo
 
 @router.get("/supply-requests")
 async def list_supply_requests(request: Request, status: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if status:
         query["status"] = status
@@ -76,8 +77,8 @@ async def list_supply_requests(request: Request, status: Optional[str] = None):
 
 @router.post("/supply-requests")
 async def create_supply_request(input: SupplyRequestCreate, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         "property_id": input.property_id,
@@ -105,8 +106,8 @@ async def create_supply_request(input: SupplyRequestCreate, request: Request):
 
 @router.put("/supply-requests/{request_id}/approve")
 async def approve_supply_request(request_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     await db.supply_requests.update_one({"_id": ObjectId(request_id)}, {"$set": {"status": "approved", "approved_at": now}})
     # Set approved_qty = requested_qty for all items
@@ -117,8 +118,8 @@ async def approve_supply_request(request_id: str, request: Request):
 
 @router.put("/supply-requests/{request_id}/fulfill")
 async def fulfill_supply_request(request_id: str, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     await db.supply_requests.update_one({"_id": ObjectId(request_id)}, {"$set": {"status": "fulfilled", "fulfilled_at": now}})
     # Update inventory levels

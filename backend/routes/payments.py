@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from helpers import get_current_user, serialize_doc
+from tenant_db import get_tenant_db
 from datetime import datetime, timezone
 from bson import ObjectId
 import logging
@@ -38,8 +39,8 @@ class ProcessPayment(BaseModel):
 
 @router.get("/config")
 async def get_payment_config(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") not in ["property_manager", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin only")
     config = await db.payment_config.find_one({"type": "stripe"})
@@ -58,8 +59,8 @@ async def get_payment_config(request: Request):
 
 @router.put("/config")
 async def update_payment_config(input: StripeConfig, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     if user.get("role") not in ["property_manager", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin only")
     now = datetime.now(timezone.utc).isoformat()
@@ -81,8 +82,8 @@ async def update_payment_config(input: StripeConfig, request: Request):
 
 @router.get("/providers")
 async def list_provider_payment_info(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     providers = await db.provider_payment_info.find().to_list(100)
     result = []
     for p in providers:
@@ -98,8 +99,8 @@ async def list_provider_payment_info(request: Request):
 
 @router.put("/providers/{provider_id}")
 async def update_provider_payment(provider_id: str, input: ProviderPaymentSetup, request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         "provider_id": provider_id,
@@ -119,8 +120,8 @@ async def update_provider_payment(provider_id: str, input: ProviderPaymentSetup,
 @router.post("/process")
 async def process_payment(input: ProcessPayment, request: Request):
     """Process auto-payment after job completion. Uses Stripe if configured."""
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     config = await db.payment_config.find_one({"type": "stripe"})
     now = datetime.now(timezone.utc).isoformat()
     
@@ -164,8 +165,8 @@ async def process_payment(input: ProcessPayment, request: Request):
 
 @router.get("/history")
 async def payment_history(request: Request, provider_id: Optional[str] = None, status: Optional[str] = None):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     query = {}
     if provider_id:
         query["provider_id"] = provider_id
@@ -186,8 +187,8 @@ async def payment_history(request: Request, provider_id: Optional[str] = None, s
 
 @router.get("/stats")
 async def payment_stats(request: Request):
-    db = get_db(request)
-    user = await get_current_user(request, db)
+    tdb, user = await get_tenant_db(request)
+    db = tdb
     completed = await db.payments.find({"status": "completed"}).to_list(500)
     pending = await db.payments.count_documents({"status": {"$in": ["pending", "pending_config"]}})
     total_paid = sum(p.get("amount", 0) for p in completed)
