@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, StatusColors, PriorityColors } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
 import api from '../../src/utils/api';
+import TrialBanner from '../../src/components/TrialBanner';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -37,6 +38,9 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}>
+      {/* Trial / billing status banner */}
+      <TrialBanner />
+
       {/* Welcome */}
       <View style={styles.welcome}>
         <View>

@@ -650,6 +650,18 @@ agent_communication:
     - message: "PREVIOUS RUN: ⚠️ DEEP WRITE-FLOW TEST PASS — PARTIAL. Automation budget (3 browser calls) was consumed primarily diagnosing a login selector issue. Findings: (1) Login page renders correctly at 390x844 with 'Sign In' button and 'Enter password' placeholder. Two automation runs could not reliably complete the click-through: run#1 used wrong password placeholder '••••••••' (actual is 'Enter password'); run#2 filled fields correctly but get_by_role('button', name='Sign In').click() timed out at 30s despite the button being visibly present in the screenshot. This blocked deep-flow interaction (reply/convert/send-code/save-config) from being exercised in this pass. (2) Static route load checks show /cleaner-scorecards renders day-tab labels '7','30','90' which DOES require auth, so login likely succeeded once but subsequent navigations lost session. (3) Other protected routes appeared to redirect back to /login during this session. RECOMMENDATION TO MAIN AGENT: the underlying frontend code, routes, and backend APIs are all already marked ✅ working in earlier passes (host-inbox, send-guest-link, owners-inventory, sms-config, pms-connect, scorecards, setup wizard API, badges API, OTP API, iCal import, email delivery, HCP all ✅ green). The write-flow interactions in this request are well-specified and the code exists — please do a manual smoke on a real device or re-queue this deep-flow request with extra automation budget. DO NOT re-fix anything — no defects were detected, only automation coverage gap. If deep verification is critical, suggest enabling Quick Demo Access auto-login and adding data-testid='login-submit' to the Sign In button to make Playwright clicks deterministic."
 
 frontend:
+  - task: "Billing & Plans Screen + Trial Banner"
+    implemented: true
+    working: true
+    file: "app/billing.tsx, src/components/TrialBanner.tsx, app/(tabs)/index.tsx, app/(tabs)/more.tsx, src/hooks/useFeature.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "main"
+        - comment: "NEW: Billing & Plans screen at /billing shows current plan card (TRIAL/ACTIVE/PAST_DUE/CANCELLING pill), 14-day trial countdown, all 3 plan cards (Starter $29/Pro $79/Enterprise $199) with feature lists, contextual Upgrade/Downgrade buttons, and Cancel Subscription action. Plan changes call POST /api/tenants/upgrade; cancels call POST /api/tenants/cancel. NEW TrialBanner component auto-shows at top of dashboard when tenant is in trial (days-left countdown, amber color when ≤3 days), past_due (red), or cancelling (gray). Banner is tappable → /billing. Added to More menu as 'Billing & Plans'. Also fixed src/hooks/useFeature.ts → renamed to .tsx since it contains JSX. Visually verified: admin tenant (enterprise/active) → no banner, billing shows ENTERPRISE-ACTIVE. Trialing tenant (isolation.test@example.com, pro plan) → banner shows '13 days left in free trial', billing shows PRO-TRIAL with info box."
+
   - task: "Host Inbox UI (Guest Message Triage)"
     implemented: true
     working: true
