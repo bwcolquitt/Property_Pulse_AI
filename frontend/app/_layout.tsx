@@ -92,6 +92,7 @@ function RootNavigator() {
       <Stack.Screen name="email-config" options={{ headerShown: true, title: 'Email Delivery' }} />
       <Stack.Screen name="cleaner-scorecards" options={{ headerShown: true, title: 'Cleaner Scorecards' }} />
       <Stack.Screen name="hcp-config" options={{ headerShown: true, title: 'Housecall Pro' }} />
+      <Stack.Screen name="setup-wizard" options={{ headerShown: true, title: 'Setup Wizard' }} />
     </Stack>
   );
 }

@@ -73,6 +73,16 @@ async def create_guest_message(input: NewGuestMessage, request: Request):
         "created_at": now,
     })
 
+    # Push notifications to admins/managers
+    try:
+        from routes.push_notifications import notify_role
+        push_title = f"Guest: {input.subject[:40]}"
+        push_body = f"{doc['guest_name']} at {doc['property_name'] or 'your property'}: {input.body[:100]}"
+        await notify_role(db, "admin", push_title, push_body, {"screen": "/host-inbox", "message_id": str(res.inserted_id)})
+        await notify_role(db, "manager", push_title, push_body, {"screen": "/host-inbox", "message_id": str(res.inserted_id)})
+    except Exception as e:
+        logger.warning(f"Push failed: {e}")
+
     return {"success": True, "message": "Your message was sent to the host. They'll respond shortly.", "id": str(res.inserted_id)}
 
 # ===== List (for Host) =====

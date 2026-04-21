@@ -375,6 +375,51 @@ backend:
         - agent: "testing"
         - comment: "✅ Inspection Prep API working correctly. GET /api/inspection-prep/checklist/{property_id} returns 22 checklist items including 7 fire safety items with proper categorization and code references. POST /api/inspection-prep/ai-recommendations/{property_id} generates 6 recommendations with 0% compliance score (all items unchecked initially). Default inspection items comprehensive and properly structured."
 
+  - task: "Setup Wizard API"
+    implemented: true
+    working: true
+    file: "routes/setup_wizard.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "GET /api/setup/status returns progressive onboarding steps (brand, email, properties, ical, team, sms, reservations) with complete flag, action_label, route, and counts. Returns {steps, total, completed, progress_pct, required_done, required_total, setup_complete}."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ All 24 setup-wizard checks passed. GET /api/setup/status returns 200 with all 7 top-level keys (steps, total, completed, progress_pct, required_done, required_total, setup_complete). 7 steps returned with exact expected IDs: brand, email, properties, ical, team, sms, reservations. Each step has all required fields (id, title, description, complete:bool, action_label, route, priority). sms and reservations correctly flagged optional=true. Seed-data steps verified: properties complete=true (count=4), team complete=true (count=3). required_total=5 (non-optional), progress_pct=40, setup_complete=false — all math consistent."
+
+  - task: "Push Notifications API (Expo Push)"
+    implemented: true
+    working: true
+    file: "routes/push_notifications.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "POST /api/push/register (saves ExponentPushToken), DELETE /api/push/unregister, POST /api/push/send. Dispatches via Expo Push API. Helper notify_role() exported for other routes. Auto-triggered on guest_messages creation (admin + manager roles)."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ All 8 push checks passed. POST /push/register with ExponentPushToken[test_abc123] returns {success:true}. Second register with same token is correctly upserted (no duplicate — compound key user_id+token). POST /push/send {role:'admin', title:'Test', body:'Body'} returns 200 with {success:true, sent:0, message:'No registered devices for recipient'} — did not crash. DELETE /push/unregister?token=... returns {success:true}. After unregister, subsequent send still returns 0-sent cleanly. Note: the logged-in admin user has role='property_manager' (not 'admin'), so tokens are stored under user_role='property_manager'; sending to role='admin' correctly finds 0 tokens. If main agent wants live Expo dispatch verified, register using a user whose role='admin' (e.g. add a dedicated admin role user) or send with user_id param. All endpoints handled gracefully without 500s."
+
+  - task: "Scheduled iCal Sync (background task)"
+    implemented: true
+    working: true
+    file: "scheduler.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Asyncio background task started at app startup. Syncs all enabled iCal feeds every 30 minutes (configurable via ICAL_SYNC_INTERVAL_MIN env). Confirmed running in logs: [scheduler] iCal sync every 30 min."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ Scheduler startup verified in /var/log/supervisor/backend.err.log — observed '[scheduler] started' and '[scheduler] iCal sync every 30 min' on backend boot. No HTTP endpoint to exercise directly; background task running. Guest-message regression: POST /api/guest-messages returned 200 with id=69e73e47cd359b9337d705f3 and the embedded push-notify call did not cause any failure in the request path (push failure is swallowed per try/except in guest_messages.py)."
+
   - task: "iCal Import API (Universal reservation sync)"
     implemented: true
     working: true
@@ -517,7 +562,10 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Setup Wizard API"
+    - "Push Notifications API (Expo Push)"
+    - "Scheduled iCal Sync (background task)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -968,3 +1016,5 @@ agent_communication:
     - message: "✅ NEW FRONTEND SCREENS SMOKE-TEST — PASS on iPhone 14 viewport (390x844) after admin login. All 5 new More-tab menu items present: Host Inbox, Send Guest Access, Owner Storage, SMS Delivery, PMS Integrations."
     - agent: "testing"
     - message: "✅ LATEST BATCH FRONTEND SMOKE-TEST — ALL PASS (mobile 390x844, admin@example.com/admin123). (1) More tab: 'Email Delivery' (envelope/gold), 'iCal Feeds' (calendar/blue), 'Cleaner Scorecards' (trophy/gold), 'Housecall Pro' (hammer/gold) all render. (2) /ical-feeds → title 'iCal Feeds' + subtitle mentions Airbnb/Vrbo/Booking.com/PMS; blue tip card 'Where to find iCal URL: Airbnb → Listing → Availability → Sync Calendars. Vrbo → Calendar → Import/Export. Most PMS: Calendar Settings → iCal Export.' rendered; empty state 'No iCal feeds configured' + blue FAB (+) visible. (3) /email-config → all 4 provider cards rendered in order: SMTP, SendGrid, Resend (recommended), Disabled (currently selected with checkmark); Save Config + Test Email section (Send Test To input + Send Test Email button) + Recent activity log all visible. (4) /cleaner-scorecards → 'Cleaner Scorecards' title + subtitle 'Performance metrics: completion rate, photo coverage, quality, issues reported'; Last 7d / Last 30d (active) / Last 90d tabs all visible; 3 cleaner cards (Maria Santos #1, Carlos Garcia #2, Jake Martinez #3) each with 6 metrics: Done, Photos, Avg Time, Issues, Rating, Photos. (5) /hcp-config → 'Housecall Pro Integration' info card + HCP API Key field (pre-masked 'fak****456') + Default Employee ID field + Enabled toggle + Save Config button + yellow notice 'Until a valid API key is saved, Create Estimate actions will be simulated with a SIM-EST-xxxx id'. (6) /send-guest-link → reservation list with 'Send Link' buttons rendered. Deep happy-path modal flows not exercised per review request (fake API keys expected to fail gracefully). All new screens production-ready." No red-screen errors. Backend logs show all corresponding GETs returning 200. Not exercised this pass (flag for follow-up): deep write-path for Owner Storage QR generation, SMS Save/Test Send, PMS Connect/Sync/Disconnect, Host Inbox reply+convert modal, Checklist Hide-Done slider, and the guest-portal magic-link flow (/(guest)/welcome, help.tsx, explore.tsx) — these need a dedicated follow-up run because they exceeded the automation-tool invocation budget for this session."
+    - agent: "testing"
+    - message: "✅ SETUP WIZARD + PUSH NOTIFICATIONS + GUEST MESSAGE REGRESSION — 100% PASS (35/35 checks in /app/backend_test.py). (1) Setup Wizard: GET /api/setup/status returns all 7 top-level keys (steps, total, completed, progress_pct, required_done, required_total, setup_complete); steps array has exactly 7 items with expected IDs [brand, email, properties, ical, team, sms, reservations]; every step has required fields (id, title, description, complete:bool, action_label, route, priority); sms and reservations correctly marked optional=true; seed-data steps verified (properties complete=true count=4, team complete=true count=3); math consistent (required_total=5, progress_pct=40, setup_complete=false). (2) Push Notifications: POST /push/register with ExponentPushToken[test_abc123] returns {success:true}; re-registering same token upserts cleanly (no duplicate); POST /push/send {role:'admin', title, body} returns 200 with {success:true, sent:0, message:'No registered devices for recipient'} — did not crash, Expo API branch gracefully short-circuits when no tokens match; DELETE /push/unregister?token=... returns {success:true}; subsequent send after unregister still clean. Side note: admin user's role is 'property_manager' (not literal 'admin'), so tokens register under user_role='property_manager' and sending to role='admin' correctly finds 0 tokens — behavior is correct but if main agent wants to validate live Expo dispatch end-to-end, either (a) seed a user whose role==='admin' or (b) call POST /push/send with user_id= instead of role=. (3) Guest-message regression: POST /api/guest-messages still returns 200 with id + success:true after the push_notifications integration was added; push-notify call inside guest_messages.py is wrapped in try/except so any push failure cannot break the guest-message create path. (4) Scheduled iCal Sync: verified '[scheduler] started' and '[scheduler] iCal sync every 30 min' in backend startup logs — no HTTP endpoint to exercise. No critical issues. No mocked integrations."

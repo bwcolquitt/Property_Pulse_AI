@@ -48,6 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const { data } = await api.get('/auth/me');
       setUser(data);
+      // Register for push notifications when authenticated (native only, silently no-ops on web)
+      try {
+        const { registerForPushNotificationsAsync } = await import('../utils/pushNotifications');
+        registerForPushNotificationsAsync();
+      } catch {}
     } catch {
       await setToken(null);
       setUser(null);

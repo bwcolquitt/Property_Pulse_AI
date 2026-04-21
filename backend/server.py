@@ -56,6 +56,9 @@ from routes.ical_import import router as ical_router
 from routes.email_delivery import router as email_router
 from routes.hcp_integration import router as hcp_router
 from routes.scorecards import router as scorecards_router
+from routes.push_notifications import router as push_router
+from routes.setup_wizard import router as setup_router
+from scheduler import start_scheduler, stop_scheduler
 from seed import seed_database
 
 # Configure logging
@@ -130,6 +133,8 @@ app.include_router(ical_router)
 app.include_router(email_router)
 app.include_router(hcp_router)
 app.include_router(scorecards_router)
+app.include_router(push_router)
+app.include_router(setup_router)
 
 # Health check
 @app.get("/api/health")
@@ -140,6 +145,11 @@ async def health_check():
 async def startup_event():
     logger.info("Starting Property Pulse backend...")
     await seed_database(db)
+    try:
+        start_scheduler(db)
+    except Exception as e:
+        logger.warning(f"Scheduler start failed: {e}")
+    logger.info("Backend ready!")
     logger.info("Backend ready!")
 
 @app.on_event("shutdown")

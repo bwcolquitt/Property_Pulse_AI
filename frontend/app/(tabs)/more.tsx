@@ -6,6 +6,7 @@ import { Colors, Spacing } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
 
 const menuItems = [
+  { label: 'Setup Wizard', icon: 'rocket', route: '/setup-wizard', color: Colors.primary },
   { label: 'Host Inbox', icon: 'mail', route: '/host-inbox', color: Colors.redUrgent },
   { label: 'Send Guest Access', icon: 'link', route: '/send-guest-link', color: Colors.primary },
   { label: 'Properties', icon: 'home', route: '/property/list', color: Colors.primary },
