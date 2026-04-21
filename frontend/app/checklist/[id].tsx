@@ -327,7 +327,7 @@ export default function ChecklistScreen() {
         </View>
       </View>
 
-      {/* Controls: Type Filter + Hide Completed Toggle */}
+      {/* Controls: Type Filter */}
       <View style={styles.controls}>
         <View style={styles.typeFilters}>
           {(['all', 'cleaning', 'maintenance', 'pool'] as const).map(t => (
@@ -337,15 +337,47 @@ export default function ChecklistScreen() {
             </TouchableOpacity>
           ))}
         </View>
-        <View style={styles.toggleRow}>
-          <TouchableOpacity testID="reorder-toggle" style={[styles.reorderBtn, reorderMode && styles.reorderBtnActive]} onPress={() => setReorderMode(!reorderMode)}>
-            <Ionicons name="swap-vertical" size={16} color={reorderMode ? Colors.primaryForeground : Colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity testID="hide-completed-toggle" style={[styles.hideBtn, hideCompleted && styles.hideBtnActive]} onPress={() => setHideCompleted(!hideCompleted)}>
-            <Ionicons name={hideCompleted ? 'eye-off' : 'eye'} size={14} color={hideCompleted ? '#fff' : Colors.textSecondary} />
-            <Text style={[styles.hideBtnText, hideCompleted && { color: '#fff' }]}>{hideCompleted ? 'Hidden' : 'Hide Done'}</Text>
-          </TouchableOpacity>
-        </View>
+      </View>
+
+      {/* Action Row: AI Order, Reorder, Hide Done */}
+      <View style={styles.actionBar}>
+        <TouchableOpacity testID="ai-order-btn" style={styles.aiOrderBtn} onPress={async () => {
+          try {
+            // AI Smart Order: prioritize tasks that need "soak time" (pool/spa), then exterior top-down, then interior
+            const reordered = [...items].sort((a, b) => {
+              // Priority 1: Pool/spa tasks first (need run time)
+              const aPool = (a.room_name || '').toLowerCase().includes('pool') || (a.room_name || '').toLowerCase().includes('spa') || (a.room_name || '').toLowerCase().includes('jacuzzi') || (a.title || '').toLowerCase().includes('spa') || (a.title || '').toLowerCase().includes('pool') || (a.title || '').toLowerCase().includes('jacuzzi');
+              const bPool = (b.room_name || '').toLowerCase().includes('pool') || (b.room_name || '').toLowerCase().includes('spa') || (b.room_name || '').toLowerCase().includes('jacuzzi') || (b.title || '').toLowerCase().includes('spa') || (b.title || '').toLowerCase().includes('pool') || (b.title || '').toLowerCase().includes('jacuzzi');
+              if (aPool && !bPool) return -1;
+              if (!aPool && bPool) return 1;
+              // Priority 2: Exterior before interior (do outside while pool runs)
+              if (!a.is_inside && b.is_inside) return -1;
+              if (a.is_inside && !b.is_inside) return 1;
+              // Priority 3: Higher floors first (work down)
+              const floorNum = (f: string) => { const m = f?.match(/(\d+)/); return m ? parseInt(m[1]) : 0; };
+              const af = floorNum(a.floor); const bf = floorNum(b.floor);
+              if (af !== bf) return bf - af;
+              // Priority 4: Incomplete before complete
+              if (a.status !== 'completed' && b.status === 'completed') return -1;
+              if (a.status === 'completed' && b.status !== 'completed') return 1;
+              return 0;
+            });
+            setItems(reordered);
+            try { await api.post('/admin/reorder-checklist', { turnover_id: id, item_order: reordered.map(i => i.id) }); } catch {}
+            Alert.alert('AI Optimized', 'Tasks reordered: Pool/spa first (needs run time), then exterior top-down, then interior.');
+          } catch { Alert.alert('Error', 'Failed to optimize'); }
+        }}>
+          <Ionicons name="sparkles" size={14} color="#fff" />
+          <Text style={styles.aiOrderText}>AI Order</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID="reorder-toggle" style={[styles.reorderBtn, reorderMode && styles.reorderBtnActive]} onPress={() => setReorderMode(!reorderMode)}>
+          <Ionicons name="swap-vertical" size={14} color={reorderMode ? '#fff' : Colors.textSecondary} />
+          <Text style={[styles.reorderBtnLabel, reorderMode && { color: '#fff' }]}>Reorder</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID="hide-completed-toggle" style={[styles.hideBtn, hideCompleted && styles.hideBtnActive]} onPress={() => setHideCompleted(!hideCompleted)}>
+          <Ionicons name={hideCompleted ? 'eye-off' : 'eye'} size={14} color={hideCompleted ? '#fff' : Colors.textSecondary} />
+          <Text style={[styles.hideBtnText, hideCompleted && { color: '#fff' }]}>{hideCompleted ? 'Show All' : 'Hide Done'}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Guest Still Present Alert + Submit Button */}
@@ -526,7 +558,7 @@ export default function ChecklistScreen() {
                   )}
                 </View>
               </TouchableOpacity>
-              {/* Photo buttons + Notes */}
+              {/* Photo buttons + Notes + Recurring Issue */}
               <View style={styles.photoActions}>
                 <TouchableOpacity testID={`photo-camera-${task.id}`} style={[styles.photoBtn, needsPhoto && styles.photoBtnUrgent]} onPress={() => takePhoto(task)}>
                   {uploading === task.id ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="camera" size={18} color={needsPhoto ? Colors.redUrgent : Colors.primary} />}
@@ -541,6 +573,26 @@ export default function ChecklistScreen() {
                   setNoteAsIssue(false);
                 }}>
                   <Ionicons name="document-text" size={18} color={Colors.accent} />
+                </TouchableOpacity>
+                <TouchableOpacity testID={`recurring-${task.id}`} style={[styles.photoBtn, task.recurring_issue && { backgroundColor: Colors.redUrgent + '15', borderColor: Colors.redUrgent + '40' }]} onPress={async () => {
+                  Alert.alert('Recurring Issue', `Mark "${task.title}" as a still-existing issue?\n\nThis flags it as a repeating problem so admins can prioritize a permanent fix.`, [
+                    { text: 'Cancel' },
+                    { text: 'Still Exists', style: 'destructive', onPress: async () => {
+                      try {
+                        const turnover = await api.get(`/turnovers/${id}`);
+                        const propId = turnover.data?.property_id;
+                        await api.post('/issues-v2/quick-report', {
+                          property_id: propId, turnover_id: id,
+                          title: `[RECURRING] ${task.title}`,
+                          description: `This is a repeating issue that still exists. Task: ${task.title} in ${task.room_name}.`,
+                          priority: 'high',
+                        });
+                        Alert.alert('Flagged', 'Marked as recurring issue. Admin notified.');
+                      } catch { Alert.alert('Error', 'Failed to report'); }
+                    }},
+                  ]);
+                }}>
+                  <Ionicons name="repeat" size={16} color={task.recurring_issue ? Colors.redUrgent : Colors.grayInactive} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -681,16 +733,23 @@ const styles = StyleSheet.create({
   progressBar: { height: 10, backgroundColor: Colors.surfaceSecondary, borderRadius: 5 },
   progressFill: { height: 10, borderRadius: 5 },
   // Controls
-  controls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  controls: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
   typeFilters: { flexDirection: 'row', gap: 6 },
   typeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
   typeBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   typeBtnText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
   typeBtnTextActive: { color: Colors.primaryForeground },
+  // Action Bar
+  actionBar: { flexDirection: 'row', gap: 6, paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm },
+  aiOrderBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: Colors.accent },
+  aiOrderText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  hideBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
+  reorderBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
+  reorderBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  reorderBtnLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  hideBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
   hideBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  hideBtnText: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary },
+  hideBtnText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
   // Submit
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.greenReady, marginHorizontal: Spacing.md, marginTop: Spacing.sm, paddingVertical: 14, borderRadius: 10 },
   submitBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
