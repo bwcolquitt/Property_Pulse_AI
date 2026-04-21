@@ -6,9 +6,11 @@ import { Colors, Spacing } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
 
 const menuItems = [
+  { label: 'Host Inbox', icon: 'mail', route: '/host-inbox', color: Colors.redUrgent },
   { label: 'Properties', icon: 'home', route: '/property/list', color: Colors.primary },
   { label: 'Inspections', icon: 'clipboard', route: '/inspections', color: Colors.purpleAwaiting },
   { label: 'Inventory', icon: 'cube', route: '/inventory', color: Colors.accent },
+  { label: 'Owner Storage', icon: 'file-tray-stacked', route: '/owners-inventory', color: Colors.accent },
   { label: 'Calendar', icon: 'calendar', route: '/calendar', color: Colors.greenReady },
   { label: 'Reservations', icon: 'bed', route: '/reservations', color: Colors.blueAssigned },
   { label: 'Messages', icon: 'chatbubbles', route: '/messages', color: Colors.blueAssigned },
@@ -24,6 +26,8 @@ const menuItems = [
   { label: 'Service Notes', icon: 'document-lock', route: '/property-notes', color: Colors.blueAssigned },
   { label: 'Assets', icon: 'shield-checkmark', route: '/assets', color: Colors.redUrgent },
   { label: 'Payments', icon: 'card', route: '/payment-settings', color: Colors.greenReady },
+  { label: 'SMS Delivery', icon: 'chatbox-ellipses', route: '/sms-config', color: Colors.secondary },
+  { label: 'PMS Integrations', icon: 'link', route: '/pms-connect', color: Colors.primary },
   { label: 'Guest Booking', icon: 'bed', route: '/guest-book', color: Colors.blueAssigned },
   { label: 'Help Center', icon: 'book', route: '/help-center', color: Colors.purpleAwaiting },
   { label: 'AI Assistant', icon: 'chatbubble-ellipses', route: '/ai-assistant', color: Colors.accent },

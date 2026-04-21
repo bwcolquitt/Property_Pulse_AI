@@ -6,6 +6,7 @@ import { Colors, Spacing } from '../../src/constants/theme';
 import api from '../../src/utils/api';
 import * as ImagePicker from 'expo-image-picker';
 import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
+import { uploadOrQueue, retryQueue, getQueueSize, startBackgroundSync } from '../../src/utils/offlinePhotoQueue';
 
 export default function ChecklistScreen() {
   const { id } = useLocalSearchParams();
@@ -35,6 +36,7 @@ export default function ChecklistScreen() {
   const [hints, setHints] = useState<any[]>([]);
   const [showHints, setShowHints] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
+  const [queueSize, setQueueSize] = useState(0);
 
   const fetchChecklist = useCallback(async () => {
     try {
@@ -47,6 +49,21 @@ export default function ChecklistScreen() {
   }, [id]);
 
   useEffect(() => { fetchChecklist(); }, [fetchChecklist]);
+
+  // Offline photo queue: check size on mount + start background sync
+  useEffect(() => {
+    getQueueSize().then(setQueueSize);
+    startBackgroundSync((r) => {
+      setQueueSize(r.remaining);
+      if (r.uploaded > 0) console.log(`[offline-sync] uploaded ${r.uploaded}, remaining ${r.remaining}`);
+    });
+  }, []);
+
+  const retryOfflineQueue = async () => {
+    const r = await retryQueue();
+    setQueueSize(r.remaining);
+    Alert.alert('Offline Sync', `Uploaded: ${r.uploaded}, Remaining: ${r.remaining}`);
+  };
 
   // Fetch workflow hints
   useEffect(() => {
@@ -194,8 +211,18 @@ export default function ChecklistScreen() {
   const uploadPhoto = async (item: any, base64Data: string) => {
     setUploading(item.id);
     try {
-      await api.post('/media/upload', { owner_type: 'checklist_item', owner_id: item.id, media_type: 'photo', base64_data: base64Data });
+      const result = await uploadOrQueue({
+        owner_type: 'checklist_item',
+        owner_id: item.id,
+        media_type: 'photo',
+        base64_data: base64Data,
+      });
       setPhotosTaken(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
+      if (result.queued && !result.uploaded) {
+        const size = await getQueueSize();
+        setQueueSize(size);
+        Alert.alert('Saved Offline', `Photo saved to device. Will upload when online. (${size} queued)`);
+      }
     } catch (e) { console.error(e); }
     finally { setUploading(null); }
   };
@@ -376,11 +403,26 @@ export default function ChecklistScreen() {
           <Text style={[styles.reorderBtnLabel, reorderMode && { color: '#fff' }]}>Reorder</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity testID="hide-completed-toggle" style={[styles.hideBtn, hideCompleted && styles.hideBtnActive]} onPress={() => setHideCompleted(!hideCompleted)}>
-          <Ionicons name={hideCompleted ? 'eye-off' : 'eye'} size={14} color={hideCompleted ? '#fff' : Colors.textSecondary} />
-          <Text style={[styles.hideBtnText, hideCompleted && { color: '#fff' }]}>{hideCompleted ? 'Show All' : 'Hide Done Items'}</Text>
-        </TouchableOpacity>
+        {/* Hide Completed - slider style */}
+        <View style={styles.slideRow}>
+          <Text style={styles.slideLabel}>Hide Done</Text>
+          <Switch
+            testID="hide-completed-toggle"
+            value={hideCompleted}
+            onValueChange={setHideCompleted}
+            trackColor={{ true: Colors.primary + 'C0', false: Colors.border }}
+            thumbColor={hideCompleted ? Colors.primary : '#fff'}
+          />
+        </View>
       </View>
+
+      {/* Offline Queue Banner */}
+      {queueSize > 0 && (
+        <TouchableOpacity style={styles.queueBanner} onPress={retryOfflineQueue}>
+          <Ionicons name="cloud-offline" size={16} color={Colors.yellowAtRisk} />
+          <Text style={styles.queueText}>{queueSize} photo{queueSize !== 1 ? 's' : ''} queued offline \u00b7 Tap to retry</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Guest Still Present Alert + Submit Button */}
       <TouchableOpacity style={styles.guestAlertBtn} onPress={() => {
@@ -732,6 +774,10 @@ const styles = StyleSheet.create({
   hideBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
   hideBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   hideBtnText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+  slideRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
+  slideLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+  queueBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: Spacing.md, marginBottom: 6, padding: 10, backgroundColor: Colors.yellowAtRisk + '15', borderRadius: 10, borderWidth: 1, borderColor: Colors.yellowAtRisk + '35' },
+  queueText: { flex: 1, fontSize: 12, fontWeight: '700', color: Colors.yellowAtRisk },
   // Submit
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.greenReady, marginHorizontal: Spacing.md, marginTop: Spacing.sm, paddingVertical: 14, borderRadius: 10 },
   submitBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },

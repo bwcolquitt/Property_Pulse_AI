@@ -47,6 +47,11 @@ from routes.onsite_purchases import router as onsite_purchases_router
 from routes.improvements import router as improvements_router
 from routes.crew_alerts import router as crew_alerts_router
 from routes.inspection_prep import router as inspection_prep_router
+from routes.guest_portal import router as guest_portal_router
+from routes.guest_messages import router as guest_messages_router
+from routes.owners_inventory import router as owners_inventory_router
+from routes.sms import router as sms_router
+from routes.pms_integrations import router as pms_router
 from seed import seed_database
 
 # Configure logging
@@ -112,6 +117,11 @@ app.include_router(onsite_purchases_router)
 app.include_router(improvements_router)
 app.include_router(crew_alerts_router)
 app.include_router(inspection_prep_router)
+app.include_router(guest_portal_router)
+app.include_router(guest_messages_router)
+app.include_router(owners_inventory_router)
+app.include_router(sms_router)
+app.include_router(pms_router)
 
 # Health check
 @app.get("/api/health")

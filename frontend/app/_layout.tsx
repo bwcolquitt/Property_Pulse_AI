@@ -14,10 +14,22 @@ function RootNavigator() {
     if (loading) return;
 
     const firstSegment = segments[0];
-    const isPublicPage = !firstSegment || firstSegment === 'index' || firstSegment === 'login' || firstSegment === 'register' || firstSegment === 'guest-book';
+    const isPublicPage = !firstSegment || firstSegment === 'index' || firstSegment === 'login' || firstSegment === 'register' || firstSegment === 'guest-book' || firstSegment === 'guest-access';
+    const isGuestArea = firstSegment === '(guest)';
+    const isTabsArea = firstSegment === '(tabs)';
 
     if (user && isPublicPage) {
-      // Logged in but on landing/login/register - redirect to dashboard
+      // Logged in but on landing/login/register - redirect based on role
+      if (user.role === 'guest') {
+        router.replace('/(guest)/welcome');
+      } else {
+        router.replace('/(tabs)');
+      }
+    } else if (user && user.role === 'guest' && isTabsArea) {
+      // Guest user on admin tabs - redirect to guest area
+      router.replace('/(guest)/welcome');
+    } else if (user && user.role !== 'guest' && isGuestArea) {
+      // Non-guest on guest area - redirect to admin tabs
       router.replace('/(tabs)');
     } else if (!user && !isPublicPage) {
       // Not logged in but on a protected page - redirect to login
@@ -37,6 +49,8 @@ function RootNavigator() {
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
       <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="(guest)" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="guest-access" options={{ headerShown: false }} />
       <Stack.Screen name="turnover/[id]" options={{ headerShown: true, title: 'Turnover Detail' }} />
       <Stack.Screen name="issue/[id]" options={{ headerShown: true, title: 'Issue Detail' }} />
       <Stack.Screen name="checklist/[id]" options={{ headerShown: true, title: 'Checklist' }} />
@@ -69,6 +83,10 @@ function RootNavigator() {
       <Stack.Screen name="improvements" options={{ headerShown: true, title: 'Improvements' }} />
       <Stack.Screen name="property-notes" options={{ headerShown: true, title: 'Service Notes' }} />
       <Stack.Screen name="inspection-prep" options={{ headerShown: true, title: 'Inspection Prep' }} />
+      <Stack.Screen name="host-inbox" options={{ headerShown: true, title: 'Host Inbox' }} />
+      <Stack.Screen name="owners-inventory" options={{ headerShown: true, title: 'Owner Storage' }} />
+      <Stack.Screen name="sms-config" options={{ headerShown: true, title: 'SMS Delivery' }} />
+      <Stack.Screen name="pms-connect" options={{ headerShown: true, title: 'PMS Integrations' }} />
     </Stack>
   );
 }
