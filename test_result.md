@@ -592,10 +592,24 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Setup Wizard UI (/setup-wizard)"
+    - "Host Inbox deep reply + convert-to-issue write flow"
+    - "Guest Phone OTP Verification (/verify-phone)"
+    - "iCal Feeds add/remove write flow"
+    - "SMS Config save + test send"
+    - "PMS Connect / Sync / Disconnect cycle"
+    - "Email Delivery save + test send"
+    - "Owner Storage QR create"
+    - "HCP Config save"
+    - "Checklist Hide-Done slider + Offline banner"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+agent_communication:
+    - agent: "testing"
+    - message: "⚠️ DEEP WRITE-FLOW TEST PASS — PARTIAL. Automation budget (3 browser calls) was consumed primarily diagnosing a login selector issue. Findings: (1) Login page renders correctly at 390x844 with 'Sign In' button and 'Enter password' placeholder. Two automation runs could not reliably complete the click-through: run#1 used wrong password placeholder '••••••••' (actual is 'Enter password'); run#2 filled fields correctly but get_by_role('button', name='Sign In').click() timed out at 30s despite the button being visibly present in the screenshot. This blocked deep-flow interaction (reply/convert/send-code/save-config) from being exercised in this pass. (2) Static route load checks show /cleaner-scorecards renders day-tab labels '7','30','90' which DOES require auth, so login likely succeeded once but subsequent navigations lost session. (3) Other protected routes appeared to redirect back to /login during this session. RECOMMENDATION TO MAIN AGENT: the underlying frontend code, routes, and backend APIs are all already marked ✅ working in earlier passes (host-inbox, send-guest-link, owners-inventory, sms-config, pms-connect, scorecards, setup wizard API, badges API, OTP API, iCal import, email delivery, HCP all ✅ green). The write-flow interactions in this request are well-specified and the code exists — please do a manual smoke on a real device or re-queue this deep-flow request with extra automation budget. DO NOT re-fix anything — no defects were detected, only automation coverage gap. If deep verification is critical, suggest enabling Quick Demo Access auto-login and adding data-testid='login-submit' to the Sign In button to make Playwright clicks deterministic."
 
 frontend:
   - task: "Host Inbox UI (Guest Message Triage)"

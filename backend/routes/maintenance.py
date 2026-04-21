@@ -168,6 +168,7 @@ async def create_issue(input: IssueCreate, request: Request):
         "created_at": now,
     })
     doc["id"] = issue_id
+    doc.pop("_id", None)
     return doc
 
 @router.put("/{issue_id}")
@@ -213,4 +214,5 @@ async def add_comment(issue_id: str, input: CommentCreate, request: Request):
     result = await db.issue_comments.insert_one(doc)
     doc["id"] = str(result.inserted_id)
     doc["user_name"] = f"{user.get('first_name', '')} {user.get('last_name', '')}"
+    doc.pop("_id", None)
     return doc
