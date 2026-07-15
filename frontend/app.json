@@ -15,7 +15,8 @@
         "NSLocationAlwaysUsageDescription": "Monitor geofence for auto-completing checklists",
         "NSCameraUsageDescription": "Take photos of completed tasks and scan QR codes",
         "NSPhotoLibraryUsageDescription": "Upload photos from your gallery"
-      }
+      },
+      "bundleIdentifier": "com.emergent.propertypulse.woh8ep"
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +29,8 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
         "CAMERA"
-      ]
+      ],
+      "package": "com.emergent.propertypulse.woh8ep"
     },
     "web": {
       "bundler": "metro",
