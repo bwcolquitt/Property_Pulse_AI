@@ -95,3 +95,16 @@ async def notify_role(db, role: str, title: str, body: str, data: dict = None):
         await _send_expo_push(tokens, title, body, data or {})
     except Exception as e:
         logger.warning(f"Push failed: {e}")
+
+
+async def send_push_to_users(db, user_ids: List[str], title: str, body: str, data: dict = None):
+    """Send push to a specific list of user_ids (used by messaging + task assignments)."""
+    if not user_ids:
+        return
+    tokens = await db.push_tokens.find({"user_id": {"$in": user_ids}}).to_list(500)
+    if not tokens:
+        return
+    try:
+        await _send_expo_push(tokens, title, body, data or {})
+    except Exception as e:
+        logger.warning(f"Push failed: {e}")

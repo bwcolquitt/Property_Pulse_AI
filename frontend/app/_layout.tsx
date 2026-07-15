@@ -3,7 +3,9 @@ import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '../src/constants/theme';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import MessageBanner from '../src/components/MessageBanner';
 
 function RootNavigator() {
   const { user, loading } = useAuth();
@@ -96,6 +98,8 @@ function RootNavigator() {
       <Stack.Screen name="verify-phone" options={{ headerShown: true, title: 'Verify Phone' }} />
       <Stack.Screen name="signup" options={{ headerShown: false }} />
       <Stack.Screen name="platform-admin" options={{ headerShown: true, title: 'Platform Admin' }} />
+      <Stack.Screen name="billing" options={{ headerShown: false }} />
+      <Stack.Screen name="team-messages" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -105,7 +109,10 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <StatusBar style="dark" />
-        <RootNavigator />
+        <View style={{ flex: 1 }}>
+          <RootNavigator />
+          <MessageBanner />
+        </View>
       </AuthProvider>
     </GestureHandlerRootView>
   );

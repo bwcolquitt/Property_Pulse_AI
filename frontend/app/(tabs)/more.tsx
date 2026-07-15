@@ -18,7 +18,7 @@ const menuItems = [
   { label: 'Owner Storage', icon: 'file-tray-stacked', route: '/owners-inventory', color: Colors.accent },
   { label: 'Calendar', icon: 'calendar', route: '/calendar', color: Colors.greenReady },
   { label: 'Reservations', icon: 'bed', route: '/reservations', color: Colors.blueAssigned },
-  { label: 'Messages', icon: 'chatbubbles', route: '/messages', color: Colors.blueAssigned },
+  { label: 'Messages', icon: 'chatbubbles', route: '/team-messages', color: Colors.blueAssigned },
   { label: 'Reports', icon: 'bar-chart', route: '/reports', color: Colors.purpleAwaiting },
   { label: 'AI Command', icon: 'sparkles', route: '/ai-command', color: Colors.accent },
   { label: 'Recurring Schedules', icon: 'repeat', route: '/recurring-schedules', color: Colors.greenReady },
@@ -76,6 +76,7 @@ export default function MoreScreen() {
             if (item.route === '/host-inbox') badge = badges.host_inbox_new;
             else if (item.route === '/setup-wizard') badge = badges.setup_incomplete;
             else if (item.route === '/maintenance') badge = badges.outstanding_issues;
+            else if (item.route === '/team-messages') badge = badges.team_messages_unread;
           }
           return (
             <TouchableOpacity

@@ -12,6 +12,7 @@ export interface BadgeCounts {
   unread_notifications: number;
   low_inventory: number;
   setup_incomplete: number;
+  team_messages_unread: number;
 }
 
 export function useBadges(pollMs: number = 60000) {

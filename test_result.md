@@ -105,6 +105,18 @@
 user_problem_statement: "Build a property readiness platform (PropertyPulse) with turnovers, checklists, marketplace, messaging, reservations, reporting, assets, supply requests, AI command center, recurring schedules, and provider calendar."
 
 backend:
+  - task: "Team Messaging Platform (in-app staff communication + convert-to-task)"
+    implemented: true
+    working: true
+    file: "routes/messages.py, routes/push_notifications.py, routes/badges.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "main"
+        - comment: "NEW: Full team messaging platform (in lieu of external texting). Backend endpoints: GET /api/messages/team (list teammates), POST /api/messages/conversations (create 1-to-1 or group, reuses existing 1-to-1), GET /api/messages/conversations (list with unread counts + participants + property tag + last message), GET /api/messages/conversations/{id} (thread + marks read), POST /api/messages/conversations/{id} (send text/photo/voice, triggers Expo push to other participants), POST /api/messages/{message_id}/convert-to-task (creates maintenance issue assigned to chosen user, pushes notification to assignee), GET /api/messages/unread-count (badge total), GET /api/messages/recent-unread (latest 5 for in-app banner). Also extended /api/badges response with team_messages_unread. Added send_push_to_users helper in push_notifications.py. All queries tenant-scoped via get_tenant_db. Smoke-tested: team=16 members, conv create/reuse, send msg, unread count works, convert-to-task creates issue with source_message_id link. Backend logs show push notification attempts working (silently no-ops if no ExponentPushToken registered)."
+
   - task: "Multi-Tenant Data Isolation — Phase B Mass Retrofit (159 handlers across 38 route files)"
     implemented: true
     working: true
@@ -650,6 +662,18 @@ agent_communication:
     - message: "PREVIOUS RUN: ⚠️ DEEP WRITE-FLOW TEST PASS — PARTIAL. Automation budget (3 browser calls) was consumed primarily diagnosing a login selector issue. Findings: (1) Login page renders correctly at 390x844 with 'Sign In' button and 'Enter password' placeholder. Two automation runs could not reliably complete the click-through: run#1 used wrong password placeholder '••••••••' (actual is 'Enter password'); run#2 filled fields correctly but get_by_role('button', name='Sign In').click() timed out at 30s despite the button being visibly present in the screenshot. This blocked deep-flow interaction (reply/convert/send-code/save-config) from being exercised in this pass. (2) Static route load checks show /cleaner-scorecards renders day-tab labels '7','30','90' which DOES require auth, so login likely succeeded once but subsequent navigations lost session. (3) Other protected routes appeared to redirect back to /login during this session. RECOMMENDATION TO MAIN AGENT: the underlying frontend code, routes, and backend APIs are all already marked ✅ working in earlier passes (host-inbox, send-guest-link, owners-inventory, sms-config, pms-connect, scorecards, setup wizard API, badges API, OTP API, iCal import, email delivery, HCP all ✅ green). The write-flow interactions in this request are well-specified and the code exists — please do a manual smoke on a real device or re-queue this deep-flow request with extra automation budget. DO NOT re-fix anything — no defects were detected, only automation coverage gap. If deep verification is critical, suggest enabling Quick Demo Access auto-login and adding data-testid='login-submit' to the Sign In button to make Playwright clicks deterministic."
 
 frontend:
+  - task: "Team Messages UI (in-app chat + convert-to-task + in-app banner)"
+    implemented: true
+    working: true
+    file: "app/team-messages.tsx, src/components/MessageBanner.tsx, app/_layout.tsx, app/(tabs)/more.tsx, src/hooks/useBadges.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "main"
+        - comment: "NEW: Complete in-app messaging screen at /team-messages replacing external texting. Features: (1) Conversations list — 1-to-1 & group with unread badges, last-message preview, property tag (📍), role-colored avatars. (2) 'New Message' FAB → user picker modal (multi-select for groups), auto-generates group name, optional property tag. (3) Thread view — role-badged sender labels, photo attachments (base64 image), 'Add to tasks' checkbox on every incoming message, long-press ANY message → Convert to Task modal, KeyboardAvoidingView. (4) Convert to Task modal — pre-fills title from message body, horizontal assignee picker with role dots, priority pills (Low/Med/High/Urgent), trade selector (General/Cleaning/Maintenance/Plumbing/Electrical/HVAC), property picker, 'Task created' green pill shown on messages already converted. (5) Photo/camera attach buttons in composer. (6) 5-second polling for new messages while thread open. (7) Global MessageBanner component in root layout — polls unread-recent every 8s, slides in from top when new message arrives, shows sender name+role+preview, auto-dismisses in 6s, tap → navigates to /team-messages. Extended useBadges hook + /api/badges response with team_messages_unread field → red count badge on Messages menu entry in More tab. Visually verified: list shows Maria Santos (cleaner) + Bob Thompson (maintenance) unread counts, thread with 'Add to tasks' checkboxes on incoming messages and 'Task created' green pill on converted ones, Convert-to-Task modal with all pickers rendering correctly."
+
   - task: "Billing & Plans Screen + Trial Banner"
     implemented: true
     working: true

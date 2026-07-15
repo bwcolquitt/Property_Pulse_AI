@@ -23,6 +23,20 @@ async def get_badges(request: Request):
     unread_notifications = await db.notifications.count_documents({"read": False})
     low_inventory = await db.guest_inventory.count_documents({"$expr": {"$lte": ["$quantity", "$reorder_point"]}})
 
+    # Team messages unread (across conversations user is a participant in)
+    team_msgs_unread = 0
+    try:
+        parts = await db.conversation_participants.find({"user_id": user["id"]}).to_list(500)
+        for p in parts:
+            last_read = p.get("last_read_at", "1970-01-01")
+            team_msgs_unread += await db.messages.count_documents({
+                "conversation_id": p["conversation_id"],
+                "created_at": {"$gt": last_read},
+                "sender_user_id": {"$ne": user["id"]},
+            })
+    except Exception:
+        pass
+
     # Setup wizard completeness (all tenant-scoped via tdb)
     company = await db.company_settings.find_one({}) or {}
     email = await db.email_config.find_one({}) or {}
@@ -46,4 +60,5 @@ async def get_badges(request: Request):
         "unread_notifications": unread_notifications,
         "low_inventory": low_inventory,
         "setup_incomplete": setup_incomplete,
+        "team_messages_unread": team_msgs_unread,
     }
